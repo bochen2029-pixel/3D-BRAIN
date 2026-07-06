@@ -1,0 +1,23 @@
+# Build + run artifacts (regenerable; this is where the ~437 MB lives)
+build/
+run/
+__pycache__/
+*.exe
+*.obj
+*.lib
+*.exp
+*.pdb
+*.ilk
+*.o
+*.a
+*.png
+
+# Path-bug junk (a malformed literal-path filename written by a script)
+C3D-BRAINrunsweep_console.log
+
+# Raw conversation transcript — provenance; held out of the public snapshot by default
+# (may contain unintended personal content). Add explicitly if you want it public.
+original-claude-web-convo-history-arc.txt
+
+# any stray root log (covers the Unicode-colon path-bug file)
+*.log

@@ -1,0 +1,6 @@
+label,W_EXC_INIT,W_INH_INIT,W_MAX,NU_EXT_HZ,W_EXT,RHO0_HZ,ISTDP_ETA,GAIN_ETA,LAMBDA_UM,TARGET_OUTDEG,m_hat_MR,tau_size,KS_size,rate_hz,steps_per_s,rt_factor,aval_count,near,powerlaw,crackle
+r00_baseline,0.5f,2.0f,8.0f,3.0f,1.2f,3.0f,0.005f,1.0e-4f,150.0f,100,nan,nan,inf,0.00,24902,2.49,3,----,----,----
+r01_drive,0.5f,2.0f,8.0f,8.0f,20.0f,3.0f,0.005f,1.0e-4f,150.0f,100,0.9647,24.364,0.976,0.00,24268,2.43,338,PASS,----,PASS
+r02_exc,2.0f,4.0f,8.0f,5.0f,8.0f,3.0f,0.005f,1.0e-4f,150.0f,100,0.9425,nan,inf,0.00,23465,2.35,12,PASS,----,----
+r03_exc_hi,4.0f,8.0f,8.0f,4.0f,5.0f,3.0f,0.005f,1.0e-4f,150.0f,100,0.9687,nan,inf,0.00,24745,2.47,11,PASS,----,----
+r04_exc_max,6.0f,8.0f,16.0f,3.0f,4.0f,3.0f,0.005f,1.0e-4f,150.0f,100,0.9877,nan,inf,0.00,25161,2.52,5,PASS,----,----
