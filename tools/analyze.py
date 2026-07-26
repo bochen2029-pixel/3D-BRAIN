@@ -339,8 +339,26 @@ clauses = [("B1 near-critical",   B1, f"m_hat(bin{GEN_BIN}) = {m_gen:.4f}       
                                        f"rate {fin.get('rE',float('nan')):.1f} vs {RHO0_HZ:.1f} Hz  stationary={stat}"
                                        if ctrl else "no [ctrl] readout in sim.log"))]
 
-print("=========== GATE B  ·  B1-B7  (MODULE.md §5, amended 2026-07-25) ===========")
+print("=========== GATE B  ·  B1-B8  (MODULE.md §5, amended 2026-07-26) ===========")
 print(f"  run: {n_steps} steps ({n_steps*0.1e-3:.1f} s)   mean A = {a_all:.2f}  (bulk {a_body:.2f}, last-20% {a_tail:.2f})")
+# B8 is a CROSS-RUN clause: it asks whether B1-B6 still hold under a sustained perturbation, so a
+# single run can only report which side of the comparison it is. Say so explicitly rather than
+# letting a perturbed run's scorecard be mistaken for an unperturbed certification.
+def _knob_val(name, default=0.0, path="sim.log"):
+    if os.path.exists(path):
+        for ln in open(path, encoding="utf-8", errors="replace"):
+            if ln.startswith("[knobs]"):
+                m = re.search(rf"\b{name}=([-\d.eE+]+)", ln)
+                return float(m.group(1)) if m else default
+    return default
+_pert = _knob_val("PARADOX_INJ")
+if _pert:
+    _dex = fin.get("d_exc", float("nan"))
+    print(f"  >>> THIS IS A B8 PERTURBED RUN: PARADOX_INJ = {_pert:+g}"
+          + (f" ({100*_pert/_dex:+.1f}% of the {_dex:.3f} mV/ms excitatory drive)" if _dex == _dex else "")
+          + " <<<")
+    print("      B1-B6 below are the B8 test. B7 is not part of B8 (the controllers are expected")
+    print("      to move in order to absorb the perturbation -- that is what they are for).")
 if n_steps < 1_000_000:
     print("  [!] < 100 s: §5 requires N_STEPS >= 1e6 to certify B6/B7 -- the slow controller")
     print("      cannot converge in a shorter window. Treat B6/B7 below as provisional.")

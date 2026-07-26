@@ -121,6 +121,27 @@ The two are opposite sides of a phase transition and cannot both be required. Se
       rate on the `RHO0` target. **A point held by one saturated controller is *tuned*, not
       self-organised, and fails.** Every run must print the controller-authority readout.
 
+- [ ] **B8 — Robust to perturbation.** Under a **sustained ±2 % perturbation of the excitatory
+      drive, applied to the inhibitory population only**, the point must still satisfy **B1–B6**
+      at steady state. **A regime that exists only at exactly one E/I operating point is *tuned*,
+      not stable** — and B1–B7 structurally cannot see the difference, because every one of them
+      is a time-average of a single *unperturbed* run. Magnitude is expressed as a fraction of the
+      measured excitatory drive (the `[ctrl]` readout), so the clause is scale-free across
+      operating points; the sign must be tested in **both** directions.
+      *Deliberately defined by re-applying B1–B6 rather than by a new depth-of-dip threshold: the
+      measured dip distribution is continuous, so any such threshold decides the verdict by where
+      it is placed. Added 2026-07-26 after the perturbation probe found that an injection of 2 % of
+      the excitatory drive onto I collapsed the excitatory population below a tenth of baseline in
+      26 % of trials at a point that had passed B1–B7 — i.e. the battery certified a fragile network.*
+      **KNOWN LIMITATION, recorded rather than hidden: B8 is a STEADY-STATE test and does not
+      capture the transient behaviour that motivated it.** A *sustained* perturbation is absorbed
+      by the homeostats over tens of seconds (`b8_plus`/`b8_minus` pass every clause); a *sudden*
+      200 ms pulse of the same magnitude still collapses the excitatory population below a tenth
+      of baseline in ~26 % of trials, recovering afterwards. Whether transient collapse-and-recover
+      should itself be disqualifying is **OPEN** — "never dies" plausibly means never *permanently*
+      dies, and the network always recovered. A transient clause would need the depth threshold
+      this one was written to avoid, so it is not adopted by default.
+
 **Run length.** B6 and B7 cannot be assessed in 20 s. At a 0.7 Hz rate error the slow
 controller moves `gain` by only ~0.007/s — ~0.14 over an entire default run — so a 20 s
 window measures where the startup transient dumped the controllers, not their equilibrium.

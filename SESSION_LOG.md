@@ -1339,3 +1339,70 @@ whether robustness becomes clause B8. (3) Powering the ISN test properly needs ~
 spike dumps. (4) NFR-perf: 0.51× real time is a standing miss; Morton is the designated fix and is
 fenced to Phase 2.
 
+
+---
+
+## Session 4 (cont.) — 2026-07-26 — B8 added and PASSED both directions: the regime is a basin, not a tuned point
+
+**Intent.** Add the robustness clause the fragility finding demanded, and re-test the certified
+point against it. **I expected it to fail. It passed.**
+
+**Manifest (CONTRACT CHANGE — operator-approved).** `MODULE.md` §5 **+B8**, with its rationale and
+a recorded known limitation. +`tools/sweep_b8.ps1`; `tools/paradox.py` gains `--robust` (the dip
+distribution); `tools/analyze.py` labels perturbed runs so a B8 scorecard can never be mistaken
+for an unperturbed certification. No `brain.h` change.
+
+**How B8 was defined, and why it introduces no new free parameter.** The obvious form —
+"excitatory rate must not fall below X % of baseline" — is unusable, because the measured dip
+distribution is **continuous** and the threshold would therefore decide the verdict:
+
+| perturbation | median min exc (fraction of own baseline) | trials below 10 % |
+|---|---|---|
+| control (0 %) | 0.833 | 0.0 % |
+| +2 % | 0.377 | **26.3 %** |
+| +6 % | 0.015 | 63.2 % |
+
+At a 10 % silence threshold the point fails; at 2 % it passes. So B8 instead **re-applies B1–B6
+under a sustained ±2 % perturbation** — no new threshold at all. B7 is excluded by construction:
+the controllers are *expected* to move in order to absorb the perturbation, and requiring them not
+to would test the opposite of the intended property. The perturbation runs t=10→100 s, exactly the
+window `analyze.py` scores, so the verdict is the steady state OF THE PERTURBED NETWORK after the
+homeostats have had ~90 s — the fair test, since absorbing perturbations is what they are for.
+
+**RESULT — B8 PASSES in both directions.**
+
+| | b8_plus (+2.4 %) | b8_minus (−2.1 %) | unperturbed |
+|---|---|---|---|
+| B1 m̂ | 0.984 | 0.980 | 0.980 |
+| B2 plateau | FLAT 0.012 | FLAT 0.016 | FLAT 0.014 |
+| B3 Fano | 6.90 | 8.54 | 7.23 |
+| B4 pairwise r | +0.0048 | +0.0021 | +0.0028 |
+| B5 CV_ISI median | 0.928 | 0.984 | 1.000 |
+| B6 recurrent | 106× | 120× | 126× |
+| **verdict** | **all clauses PASS** | **all clauses PASS** | PASS |
+
+The homeostats visibly absorbed it: excitatory drive 5.042 → 4.254 mV/ms, I/E 6.89 → 7.42, rate
+3.3 → 2.7 Hz. **The operating point moved and stayed inside the certified envelope on every
+clause. The certified regime is a BASIN, not a tuned point.**
+
+**My prediction was wrong, for an identifiable reason.** I expected failure because a sustained
+2 % injection had previously driven exc to 0.013 Hz. That measurement was of a *sudden* pulse
+hitting an unadapted network; a *sustained* perturbation gives iSTDP (fast) and the gain
+controller (slow) tens of seconds to compensate. The two are not in conflict — they measure
+different things.
+
+**AND THAT IS A LIMITATION OF THE CLAUSE I WROTE, recorded in §5 rather than hidden by the pass.**
+Choosing to reuse B1–B6 to avoid an arbitrary threshold made B8 a **steady-state** test, and a
+steady-state test structurally cannot see transient collapse. The transient fragility is real and
+remains unmeasured by the battery: a sudden 200 ms pulse of the same magnitude still drops exc
+below a tenth of baseline in ~26 % of trials. It always recovered. Whether transient
+collapse-and-recover is disqualifying is recorded as **OPEN** — "never dies" plausibly means never
+*permanently* dies — and a transient clause would need exactly the depth threshold B8 was written
+to avoid. Not adopted by default; a question for the consult alongside §5.1.
+
+**Standing after this entry.** B1–B8 hold on the certified point; B1–B7 additionally on 4 seeds;
+the GAIN_ETA band is 20× wide with the point interior; 2 of 3 blueprint spatial signatures
+present (assemblies, metastability; waves absent). Still open: §5.1 (does the sustained frame owe
+a power-law statement — a **blueprint-level** contradiction, not just a MODULE.md one), transient
+robustness, the untestable-as-yet ISN paradoxical effect, and the NFR-perf miss (0.51× real time).
+

@@ -105,7 +105,52 @@ def analyse(label):
     return dict(label=label, amp=AMP, n=n, dE=ddE.mean(), dI=ddI.mean(), semI=semI, semE=semE)
 
 
+def robustness(label, bins_ms=20.0):
+    """B8 support: how deep does the excitatory population dip under the perturbation, and does
+    it come back? Reported as a DISTRIBUTION over several depth thresholds, so the eventual
+    acceptance threshold can be argued from principle rather than picked to fit the data."""
+    rd = os.path.join(BASE, label)
+    got = load(rd)
+    if got is None: return None
+    step, nid, is_inh = got
+    START, LEN, PERIOD, TRIALS, AMP = knobs(rd)
+    nE = int((is_inh == 0).sum())
+    exc_spk = is_inh[nid] == 0
+    bw = int(bins_ms / DT_MS)
+    pre_steps = int(PRE_MS / DT_MS)
+
+    def erate(lo, hi):
+        m = (step >= lo) & (step < hi)
+        return float(exc_spk[m].sum()) / nE / ((hi - lo) * DT_MS * 1e-3)
+
+    mins, recov, base = [], [], []
+    for t in range(TRIALS):
+        on = START + t * PERIOD
+        if on - pre_steps < step.min() or on + PERIOD > step.max(): continue
+        b = erate(on - pre_steps, on)
+        if b <= 0: continue
+        dips = [erate(x, x + bw) for x in range(on, on + LEN, bw)]
+        # recovery: the last 200 ms before the NEXT onset
+        r = erate(on + PERIOD - 2000, on + PERIOD)
+        base.append(b); mins.append(min(dips) / b); recov.append(r / b)
+    if not base: return None
+    mins, recov = np.array(mins), np.array(recov)
+    print(f"\n----- robustness  {label}   inj={AMP:g}   {len(base)} trials, baseline exc "
+          f"{np.mean(base):.2f} Hz -----")
+    print(f"  min exc during injection, as fraction of that trial's own baseline:")
+    print(f"     median {np.median(mins):.3f}   worst {mins.min():.3f}")
+    for thr in (0.75, 0.50, 0.25, 0.10, 0.02):
+        print(f"     fell below {thr:4.0%} of baseline in {100*np.mean(mins < thr):5.1f}% of trials")
+    print(f"  recovered to >=80% of baseline by the next onset: {100*np.mean(recov >= 0.8):.1f}% of trials"
+          f"   (median recovery {np.median(recov):.2f}x)")
+    return dict(label=label, amp=AMP, mins=mins, recov=recov)
+
+
 if __name__ == "__main__":
+    if "--robust" in sys.argv:
+        for L in [a for a in sys.argv[1:] if not a.startswith("--")] or ["r_inj0", "r_inj0p1", "r_inj0p3"]:
+            robustness(L)
+        sys.exit(0)
     labels = sys.argv[1:] or ["r_inj0", "r_inj0p1", "r_inj0p3"]
     print("ISN paradoxical-effect test (paired, trial-averaged).")
     print("PARADOXICAL (ISN) => inhibitory rate FALLS under an excitatory injection INTO the")
