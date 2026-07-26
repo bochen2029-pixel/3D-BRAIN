@@ -35,28 +35,50 @@ if (-not (Get-Command cl.exe -ErrorAction SilentlyContinue)) { throw 'cl.exe not
 Write-Host "VS env imported: cl.exe = $((Get-Command cl.exe).Source)`n"
 
 # ---- the sweep plan ---------------------------------------------------------
-# Bracket J win: on the MODULAR net, tau finally RESPONDS to drive -- 2.0 (NU=300)
-# -> 3.58 (NU=800) -> tonic (NU=2000), vs stuck 3.5-6 on the random net. The critical
-# transition EXISTS now (structure worked). But low-drive tau~2 is too sparse (not
-# alive, KS=0.33). Bracket K maps NU 400-700 finely for tau->1.5 with alive=PASS and
-# KS<0.1. Controllers still OFF (isolate structure).
+# Bracket Q: even W_EXC=150 at NU=20 is DEAD -> recurrence CANNOT self-sustain at low
+# drive (fan-out dilutes: one 150-spike spreads over 100 targets = sub-threshold each;
+# reset+adaptation blocks reverberation). So the low-drive self-sustaining base STD wants
+# doesn't exist here. BUT the net IS alive at NU=600-800 (modular). Test STD THERE: STD
+# should INTRODUCE the quiescence/timescale-separation that regime lacks, chopping the
+# drive-avalanches (tau 3.5-5.8) into critical ones. r4 = stronger STD (U=0.4).
+# BREAKTHROUGH (single-spike test): root cause was DELTA synapses -> base m=0.8 (subcrit).
+# Synaptic tau=5ms -> base m>>1 (40M descendants). SOC finally has its supercritical base.
+# Bracket S: STD on (default) + SLOW drive (NU 5-20 -> IEI>1) + supercritical base, ctl on.
+# STD should self-organize branching DOWN to m=1. Judge on CRITICAL (m_hat & tau agree).
+# DIALED: first-bin sigma is a clean graded 1-D knob. W_EXC=3.0 -> sigma~2.5 (cascade ~47,
+# finite, NOT saturated) = modest-supercritical base; W_EXC>=4 runs away. Bracket T: base
+# W_EXC=3 + STD on + calibrated seeding (strong W_EXT so one event fires a neuron, low NU so
+# seeds are rare -> IEI>1) + ctl on. STD self-organizes <D> -> 1/sigma. Judge on CRITICAL.
+# Bracket T bracketed it: t3 (W_EXT40/NU50) alive + KS=0.072 clean + m_hat=0.996, tau=2.58;
+# t4 (W_EXT80/NU100) tau=1.41 (in range) but only 91 aval (poor KS). Critical point is
+# between -- keep t3's intermittency (1000s of avalanches, clean KS) but nudge base sigma up
+# (W_EXC 3.0->3.5) at moderate drive to pull tau 2.58 -> ~1.5. Judge on CRITICAL.
+# Bracket U: tau ON TARGET (1.44-1.63), m_hat~0.99, alive, crackling -- only KS (0.10-0.12)
+# just over the 0.1 bar, and IEI=1 (gap-less drive blurs the fit). Bracket V slows the drive
+# (lower NU) on the winning weights so gaps form (IEI>1) and the power law sharpens (KS<0.1)
+# -> full CRITICAL (m_hat & tau agree, self-sustaining, clean).
+# Contingency #4 IS the situation: v2 (W_EXC3.5/W_EXT45/NU35) = clean KS=0.058 + 3160 aval
+# but tau=3.1 (steep) -- the modular cap (~390) limits avalanche size. Bracket W loosens
+# inter-module coupling on v2's clean base so cascades escape modules -> power law extends
+# -> tau drops 3.1 toward 1.5 while KS stays clean -> full CRITICAL (m_hat & tau agree).
 $runs = @(
-  @{ label = 'k1_nu400'; defs = @{ NU_EXT_HZ='400.0f'; W_EXT='8.0f'; W_EXC_INIT='6.0f'; W_INH_INIT='8.0f'; W_MAX='20.0f'; ISTDP_ETA='0.0f'; GAIN_ETA='0.0f' } }
-  @{ label = 'k2_nu500'; defs = @{ NU_EXT_HZ='500.0f'; W_EXT='8.0f'; W_EXC_INIT='6.0f'; W_INH_INIT='8.0f'; W_MAX='20.0f'; ISTDP_ETA='0.0f'; GAIN_ETA='0.0f' } }
-  @{ label = 'k3_nu600'; defs = @{ NU_EXT_HZ='600.0f'; W_EXT='8.0f'; W_EXC_INIT='6.0f'; W_INH_INIT='8.0f'; W_MAX='20.0f'; ISTDP_ETA='0.0f'; GAIN_ETA='0.0f' } }
-  @{ label = 'k4_nu700'; defs = @{ NU_EXT_HZ='700.0f'; W_EXT='8.0f'; W_EXC_INIT='6.0f'; W_INH_INIT='8.0f'; W_MAX='20.0f'; ISTDP_ETA='0.0f'; GAIN_ETA='0.0f' } }
+  @{ label = 'w1_wsa05'; defs = @{ W_EXC_INIT='3.5f'; W_INH_INIT='4.7f'; W_EXT='45.0f'; NU_EXT_HZ='35.0f'; W_MAX='20.0f'; W_SAME_AREA='0.5f';  W_DIFF_AREA='0.12f' } }
+  @{ label = 'w2_wsa07'; defs = @{ W_EXC_INIT='3.5f'; W_INH_INIT='4.7f'; W_EXT='45.0f'; NU_EXT_HZ='35.0f'; W_MAX='20.0f'; W_SAME_AREA='0.7f';  W_DIFF_AREA='0.20f' } }
+  @{ label = 'w3_wsa10'; defs = @{ W_EXC_INIT='3.5f'; W_INH_INIT='4.7f'; W_EXT='45.0f'; NU_EXT_HZ='35.0f'; W_MAX='20.0f'; W_SAME_AREA='1.0f';  W_DIFF_AREA='0.30f' } }
+  @{ label = 'w4_wsa10d5'; defs = @{ W_EXC_INIT='3.5f'; W_INH_INIT='4.7f'; W_EXT='45.0f'; NU_EXT_HZ='35.0f'; W_MAX='20.0f'; W_SAME_AREA='1.0f';  W_DIFF_AREA='0.50f' } }
 )
 
 # ---- config.h defaults (for logging the full knob vector each row) ----------
 $def = [ordered]@{
   W_EXC_INIT='0.5f'; W_INH_INIT='2.0f'; W_MAX='8.0f'; NU_EXT_HZ='3.0f'; W_EXT='1.2f';
-  RHO0_HZ='3.0f'; ISTDP_ETA='0.005f'; GAIN_ETA='1.0e-4f'; LAMBDA_UM='150.0f'; TARGET_OUTDEG='100'
+  RHO0_HZ='3.0f'; ISTDP_ETA='0.005f'; GAIN_ETA='1.0e-4f'; LAMBDA_UM='150.0f'; TARGET_OUTDEG='100';
+  STD_U='0.2f'; TAU_REC_MS='400.0f'
 }
 
 $exeDir = Join-Path $Root 'build\sweep'
 New-Item -ItemType Directory -Force -Path $exeDir | Out-Null
 $log = Join-Path $Root 'sweep_log.csv'
-$cols = @('label') + @($def.Keys) + @('m_hat_MR','tau_size','KS_size','rate_hz','steps_per_s','rt_factor','aval_count','self_sus','near','powerlaw','crackle')
+$cols = @('label') + @($def.Keys) + @('m_hat_MR','tau_size','KS_size','IEI','rate_hz','steps_per_s','rt_factor','aval_count','self_sus','near','powerlaw','crackle','CRITICAL')
 if (-not (Test-Path $log)) { ($cols -join ',') | Set-Content -Encoding utf8 $log }
 
 $src = @("$Root\src\main.cu", "$Root\src\sim.cu", "$Root\src\connectome.cu")
@@ -113,9 +135,11 @@ foreach ($run in $runs) {
   $near = M $ana '\[(PASS|----)\]\s*near-critical'
   $pl   = M $ana '\[(PASS|----)\]\s*size power law'
   $cr   = M $ana '\[(PASS|----)\]\s*crackling'
+  $crit = M $ana '\[(PASS|----)\]\s*>>> CRITICAL'
+  $iei  = M $ana '<IEI>\s*=\s*(\d+)'
 
-  $row = @($label) + @($vec.Values) + @($mhat,$tau,$ks,$rate,$sps,$rtf,$avc,$sus,$near,$pl,$cr)
+  $row = @($label) + @($vec.Values) + @($mhat,$tau,$ks,$iei,$rate,$sps,$rtf,$avc,$sus,$near,$pl,$cr,$crit)
   Add-Content -Encoding utf8 $log ($row -join ',')
-  Write-Host "  -> m_hat=$mhat  tau=$tau  KS=$ks  rate=$rate Hz  steps/s=$sps  rt=${rtf}x  aval=$avc  alive=$sus  [$near|$pl|$cr]"
+  Write-Host "  -> m_hat=$mhat tau=$tau KS=$ks IEI=$iei rate=$rate Hz rt=${rtf}x aval=$avc alive=$sus crit=$crit [$near|$pl|$cr]"
 }
 Write-Host "`nsweep complete -> $log"

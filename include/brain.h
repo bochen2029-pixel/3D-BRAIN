@@ -22,6 +22,8 @@ struct NeuronState {
     float*  x_trace;  // STDP eligibility trace (forward-only => one trace/neuron)
     float*  rate;     // low-pass firing-rate estimate (spikes/step, lowpassed)
     float*  gain;     // homeostatic input gain (the slow controller's state)
+    float*  D;        // short-term depression efficacy in (0,1] (STD -> SOC; blueprint §2.5 L4)
+    float*  g_syn;    // decaying synaptic current (temporal summation; tau_syn PSC time course)
     float*  px;       // geometry, kept for render + delay derivation + analysis
     float*  py;
     float*  pz;

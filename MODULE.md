@@ -50,8 +50,9 @@ Tensor-core anything, multi-GPU.
    by steps `t+1 … t+D-1`. No same-slot read/clear/write race.
 3. **I3 — Kernel order.** Per tick: `gather → scatter → (gain)`, serialized. Any
    cross-kernel read (e.g. scatter reading `x_trace[j]`) sees the completed writer.
-4. **I4 — Numerical guard.** Izhikevich integrates in two half-steps; `v` is reset
-   on `isfinite` failure. The quadratic must never emit NaN/Inf into state.
+4. **I4 — Numerical guard.** Izhikevich integrates in two half-steps; `v` is clamped to a
+   legal range **before** the `u` update, and `u` is clamped too. The quadratic must never
+   emit NaN/Inf into state, **and a divergent `v` must never contaminate `u`.**
 5. **I5 — Conservation of identity.** `A_t` recorded every step equals
    `*spikes.count` after gather; the activity timeseries is lossless.
 
@@ -78,24 +79,90 @@ Host probe: `mhat_regression`, `detect_avalanches`.
 
 ## 5. Test Contract — the Acceptance Sub-Battery (Gate B)
 
-"Watchable" is not the bar; **provably alive** is. A run PASSES iff all hold,
-auto-verified by `tools/analyze.py` (rigorous, offline — not eyeballed):
+"Watchable" is not the bar; **provably alive** is. A run PASSES iff all seven hold,
+auto-verified offline (`tools/analyze.py` + `tools/admiss.py` + `tools/airegime.py`) —
+never eyeballed.
 
-- [ ] **Near-critical:** `m̂ ≈ 0.98` via the **MR estimator** (multistep, subsampling-
-      corrected), i.e. `0.9 < m̂ < 1.02`.
-- [ ] **Scale-free avalanches:** size exponent `τ ≈ 1.5` fit by **MLE + KS**
-      (Clauset-Shalizi-Newman), `KS < 0.1`. *A raw power law is necessary, NOT
-      sufficient.*
-- [ ] **Crackling relation:** `(τ_t−1)/(τ−1)` matches the measured `⟨S⟩(T)` slope
-      within ~0.3.
-- [ ] **Self-sustaining:** activity neither dies (`m̂→0`, silence) nor saturates
-      (`m̂>1`, seizure) over the full 20 s, held there by ≥2 controllers on
-      separated timescales (iSTDP fast + input-gain slow).
-- [ ] **Irregular & balanced** *(add in Phase 0.5):* `CV_ISI ≈ 1`, low pairwise
-      correlation — biological asynchronous-irregular firing, not lockstep.
+**Frame (this is load-bearing).** Gate B certifies the **reverberating / sustained**
+regime (Wilting–Priesemann): a continuously-active, cortex-like network held slightly
+subcritical. It does **not** certify the absorbing-state transition (Beggs–Plenz), whose
+silence-separated avalanche statistics are *undefined* for a network that is never silent.
+The two are opposite sides of a phase transition and cannot both be required. See §5.1.
+
+- [ ] **B1 — Near-critical.** `m̂ ≈ 0.98` via the MR estimator (multistep, edge-normalised
+      high-pass detrend, offset-exponential fit `r_k = b·m^k + c`, liveness-gated,
+      b-significance guarded), i.e. `0.9 < m̂ < 1.02`, measured at the generation scale.
+- [ ] **B2 — Scale-invariant.** `m̂` FLAT across bin widths spanning the generation scale
+      (bins 3–10 ≈ 0.3–1 ms): spread **< 0.03**. A pure `m^b` decay means there is no
+      scale-invariant regime and fails, however good the single-bin value.
+- [ ] **B3 — Neither seizing nor the drive floor.** Population `Fano = var(A)/mean(A)` in
+      **2–20**. Fano ≈ 1 with `m̂ = 0` at every bin width is the Poisson drive floor (no
+      recurrence at all); Fano ≫ 100 is synchronized bursting. **`m̂` alone cannot separate
+      reverberating from seizing — both read ≈ 0.98 at the generation scale. Fano is the
+      discriminator.** Also require 0 % silent neurons and `max(A)/N` well under 1 %.
+- [ ] **B4 — Asynchronous.** Mean pairwise spike-count correlation (10 ms bins) `|r| < 0.05`,
+      reported **against the finite-sample noise floor `1/√(nbins−1)`** — with a few hundred
+      bins the *spread* of `r` is ~0.05 for independent trains, so only the mean is
+      informative. Structured local correlation (higher within-column than distant) is
+      expected and welcome; it is the modular connectome showing through.
+- [ ] **B5 — Irregular.** `CV_ISI` median in `[0.8, 1.2]` with a **majority of excitatory
+      neurons inside `[0.7, 1.3]`**, and per-neuron Fano at 100 ms ≈ 1. Biological
+      asynchronous-irregular firing — not lockstep, and not clockwork. (Promoted from
+      "add in Phase 0.5" to a core clause: a network of out-of-phase metronomes would pass
+      B1–B3 while being the opposite of cortex.)
+- [ ] **B6 — Self-sustaining on RECURRENCE.** Activity neither dies (`m̂→0`) nor saturates
+      (`m̂>1`) for the full run, **and survives a drive knockdown**: with the external
+      Poisson rate cut ≥10×, the point stays in-band, with recurrent input ≫ external
+      (report the recurrent fraction). *"Alive while strongly driven" is not self-sustaining* —
+      the drive floor was alive for 20 s at every one of 52 logged operating points.
+- [ ] **B7 — Held by ≥2 controllers on separated timescales.** At the end of the run both
+      iSTDP (fast) and input-gain (slow) are **off their rails and stationary**: gain rail
+      occupancy **< 20 %**, mean inhibitory weight comfortably below `W_MAX`, and the measured
+      rate on the `RHO0` target. **A point held by one saturated controller is *tuned*, not
+      self-organised, and fails.** Every run must print the controller-authority readout.
+
+**Run length.** B6 and B7 cannot be assessed in 20 s. At a 0.7 Hz rate error the slow
+controller moves `gain` by only ~0.007/s — ~0.14 over an entire default run — so a 20 s
+window measures where the startup transient dumped the controllers, not their equilibrium.
+**Certify on ≥100 s (`N_STEPS` ≥ 1e6)** with the controller trace reported at intervals.
+
+**Seeds.** A pass requires the battery to hold on **≥3 independent seeds**. One seed
+measures a realisation, not a regime; the connectome, the Izhikevich heterogeneity and the
+Poisson stream all derive from it.
 
 Failure of Gate B is **information, not defeat**: it says the *dynamics* need work
 before any substrate does — exactly the risk the phase exists to surface early.
+
+### 5.1 Retired: the avalanche clauses, and what that costs
+
+The original battery required scale-free avalanches (`τ ≈ 1.5`, MLE+KS, `KS < 0.1`) and the
+crackling relation. Both are retired. On the record:
+
+**They are inapplicable, not merely inconvenient.** An avalanche (§2) is a maximal run of
+active bins, which presupposes silence between them. The reverberating regime is never
+silent — measured **IEI = 1 at every operating point in the project's history** — so a run
+collapses to a single avalanche and `τ` becomes an artifact of the binning threshold's
+fragmenting and merging, not a property of the dynamics. This was confirmed empirically, not
+assumed: the `τ ≈ 1.5` that once read as a pass was refuted by `tools/plfit.py` as an overlap
+confound (Session 1), and `plfit` later rejected a clean power law at the best candidate
+(`x_we3`, KS = 0.31, systematic mid-tail curvature). Requiring silence-separated avalanches
+**and** self-sustaining activity demands both sides of a phase transition simultaneously.
+
+**What it costs, plainly.** Clean power-law avalanche statistics are the single strongest
+piece of criticality evidence, and dropping them makes this battery **weaker on that axis**.
+B2 recovers part of the force — scale-invariance of `m̂` across bin widths *is* a scale-free
+requirement, applied to the autocorrelation rather than to event sizes — but it is a weaker
+claim than a fitted `τ` with `KS < 0.1`. That is an honest reduction in evidential strength
+and must not be presented as anything else. **Whether the sustained frame still owes some
+power-law statement — e.g. the distribution of deviations above the mean rate, or spatial
+cluster sizes at a threshold — is recorded as OPEN**, not settled by this amendment.
+
+**Why the battery is nonetheless harder in aggregate.** Seven clauses replace five, and
+**B2–B7 were all failed by every operating point in the project's history up to Session 4**
+(the Fano band was empty, correlations were ≥ 0.3, CV_ISI was ≈ 3.5, the drive floor collapsed
+under knockdown, and both controllers were railed at every point ever logged). The one removed
+clause was unmeasurable in this regime; the six added ones are measurable, instrumented, and
+were unmet for the project's entire history.
 
 ---
 
@@ -144,3 +211,12 @@ after Gate B passes.
   offline in `analyze.py`. Cheap signal in-sim, honest verdict offline.
 - **Weights & rates (`W_*`, `NU_EXT`, `RHO0`) are the knobs.** Gate B is a *sweep*:
   turn them until `m̂ → 0.98`. Finding that operating point is the whole exercise.
+- **The decisive knobs turned out to be CONTROLLER AUTHORITY, not weights.** Of the nine knobs
+  the search nominally covered, only four were ever varied across 32 logged sweep rows;
+  `ISTDP_ETA`, `GAIN_ETA`, `LAMBDA_UM` and `TARGET_OUTDEG` were constant throughout, and
+  `GAIN_MIN`/`GAIN_MAX`/`N_STEPS` were not even `#ifndef`-guarded. The reverberating regime was
+  unreachable *only* because both homeostats were saturated — inhibitory weight pinned at
+  `W_MAX`, gain railed at `GAIN_MIN` on 99.9 % of neurons — which no run output could reveal.
+  **Every run must therefore report controller rail occupancy, so saturation can never hide again.**
+  Full knob list: `W_EXC_INIT, W_INH_INIT, W_MAX, NU_EXT_HZ, W_EXT, RHO0_HZ, ISTDP_ETA, GAIN_ETA,
+  GAIN_MIN, GAIN_MAX, N_STEPS, LAMBDA_UM, TARGET_OUTDEG, STD_U, TAU_REC_MS`.

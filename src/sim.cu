@@ -31,9 +31,13 @@ __global__ void k_gather_integrate(
     const int D = N_DELAY_BINS;
     int slot = step % D;
 
-    // recurrent current that other neurons delivered to us for THIS step
+    // current arriving from the ring THIS step, folded into a DECAYING synaptic current
+    // g_syn (temporal summation -- real synapses aren't instantaneous). tau_syn widens the
+    // coincidence window so inputs across ~tau_syn/dt steps accumulate toward threshold.
     float I_rec = ring.buf[(long)slot * N + i];
     ring.buf[(long)slot * N + i] = 0.0f;      // clear for reuse (we own i => no race)
+    float g = s.g_syn[i] * expf(-dt_ms / TAU_SYN_MS) + I_rec;
+    s.g_syn[i] = g;
 
     // external Poisson noise floor
     curandStatePhilox4_32_10_t st = s.rng[i];
@@ -41,21 +45,44 @@ __global__ void k_gather_integrate(
     unsigned n_ext = curand_poisson(&st, mean);
     s.rng[i] = st;
 
-    // total input: gain scales recurrent drive; noise is an ungained floor
-    float I = s.gain[i] * I_rec + w_ext * (float)n_ext;
+    // total input: gain scales the (summed) recurrent drive; noise is an ungained floor
+    float I = s.gain[i] * g + w_ext * (float)n_ext;
 
     // Izhikevich, two half-steps for numerical stability (S4 guard)
     float v = s.v[i], u = s.u[i];
     float a = s.a[i], b = s.b[i], c = s.c[i], d = s.d[i];
     v += 0.5f * dt_ms * (0.04f*v*v + 5.0f*v + 140.0f - u + I);
     v += 0.5f * dt_ms * (0.04f*v*v + 5.0f*v + 140.0f - u + I);
+    // I4 guard, replacing `if (!isfinite(v)) v = 30.0f` (QC review 2026-07-07).
+    //  H2 (REAL, this is the fix): clamp v BEFORE the u-update. The old order fed a
+    //      diverged v into u += dt*(a*(b*v-u)) and never guarded u at all, so u could
+    //      latch at +-Inf while the v-guard kept re-firing the neuron -> a permanently
+    //      firing cell quietly inflating A_t. u is now clamped too.
+    //  H1 (TESTED AND REFUTED 2026-07-25): the review suspected -use_fast_math folds
+    //      isfinite() to a constant `true` and deletes the guard. It does not -- PTX
+    //      for sm_89 under CUDA 13.1 still emits abs.ftz.f32 + setp.geu.ftz.f32 +
+    //      selp.f32 with -use_fast_math. Prior results carry no unguarded-divergence
+    //      risk from this cause. The clamp is kept anyway: it is equivalent, it does
+    //      not depend on compiler behaviour holding across toolchain versions, and it
+    //      is what makes the H2 reordering expressible. NaN maps to V_FLOOR_MV (PTX
+    //      min/max return the non-NaN operand), which recovers in ~2 steps since
+    //      dv/dt is strongly positive there -- unlike the old guard, which mapped NaN
+    //      to +30 and thereby manufactured a spike out of a numerical failure.
+    v = fminf(fmaxf(v, V_FLOOR_MV), 30.0f);
     u += dt_ms * (a * (b * v - u));
-    if (!isfinite(v)) v = 30.0f;              // hard guard against quadratic blow-up
+    u = fminf(fmaxf(u, U_FLOOR), U_CEIL);
 
     bool fired = (v >= 30.0f);
     if (fired) { v = c; u += d; }
     s.v[i] = v;
     s.u[i] = u;
+
+    // short-term depression (STD -> self-organized criticality, Levina 2007): recover
+    // toward 1 each step, release a fraction STD_U on spike. k_scatter then delivers
+    // this neuron's spikes at efficacy w * D[i]. (STD_U=0 => D stays 1 => STD off.)
+    float Dstd = s.D[i] + (1.0f - s.D[i]) * dt_ms / TAU_REC_MS;
+    if (fired) Dstd *= (1.0f - STD_U);
+    s.D[i] = Dstd;
 
     // eligibility trace (decay, +1 on spike) and low-pass rate
     s.x_trace[i] = s.x_trace[i] * trace_decay + (fired ? 1.0f : 0.0f);
@@ -81,6 +108,7 @@ __global__ void k_scatter(
     const int D = N_DELAY_BINS;
     int i = spikes.idx[f];
     bool inh = (s.is_inh[i] != 0);
+    float Di = s.D[i];                                // presynaptic STD efficacy in (0,1]
 
     int start = c.row_ptr[i], end = c.row_ptr[i + 1];
     for (int e = start; e < end; ++e) {
@@ -89,7 +117,7 @@ __global__ void k_scatter(
         uint8_t db  = c.delay_bin[e];
         int dslot   = (step + (int)db) % D;
 
-        float contrib = inh ? -w : w;                 // sign by source type
+        float contrib = inh ? -(w * Di) : (w * Di);   // STD-scaled efficacy; sign by source
         atomicAdd(&ring.buf[(long)dslot * N + j], contrib);   // THE hot scatter
 
         // forward-only inhibitory STDP: drive postsynaptic rate toward target.
