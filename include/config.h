@@ -146,10 +146,44 @@
 #define U_FLOOR         -400.0f     // recovery-variable sanity range (QC H2)
 #define U_CEIL           400.0f
 
+// ---- ISN paradoxical-effect probe (FINAL_BLUEPRINT §7.4 "paradoxical-effect-positive") ----
+// THE defining signature of an inhibition-stabilized network: inject extra EXCITATORY current
+// into the INHIBITORY population and its steady-state rate paradoxically FALLS -- the resulting
+// drop in E activity withdraws more excitation from I than was injected. A non-ISN network's I
+// rate simply rises. This is a blueprint acceptance-battery item that Gate B B1-B7 does not
+// cover, and it is a real falsification test of the ISN claim rather than a corroboration.
+// Compile-time gated: at PARADOX_INJ=0 the condition is a known-false constant and the whole
+// test folds away. Keep the window SHORT -- the paradoxical effect is a fast network effect,
+// and over tens of seconds the homeostats simply re-equilibrate it away.
+#ifndef PARADOX_INJ
+#define PARADOX_INJ      0.0f       // current added to inhibitory neurons; 0 = off     [KNOB]
+#endif
+// The injection is PERIODIC, not a single pulse, and this is load-bearing. A first attempt used
+// one long pulse and compared a 1 s baseline against a 1 s injection -- but this network wanders
+// between near-silence and ~6 Hz on a sub-second timescale, so a single trial is swamped by its
+// own fluctuation. Worse, comparing across separate BUILDS is invalid: adding the injection
+// branch perturbs codegen, and a chaotic balanced network diverges completely within seconds, so
+// two builds are not the same realisation. Both problems are solved by repeated short pulses
+// inside ONE run, aligned to onset and averaged (a standard event-triggered average).
+#ifndef PARADOX_START
+#define PARADOX_START    600000     // step of the FIRST injection onset                [KNOB]
+#endif
+#ifndef PARADOX_LEN
+#define PARADOX_LEN      2000       // injection duration per trial (200 ms)            [KNOB]
+#endif
+#ifndef PARADOX_PERIOD
+#define PARADOX_PERIOD   10000      // steps between onsets (1 s => 800 ms recovery)    [KNOB]
+#endif
+#ifndef PARADOX_TRIALS
+#define PARADOX_TRIALS   20         // number of injection trials                       [KNOB]
+#endif
+
 // ---- Probe / criticality ----------------------------------------------------
 #define PROBE_WINDOW     4000       // steps used for the live m-hat regression print
 #define PRINT_EVERY      4000       // progress cadence
-#define CTRL_PROBE_EVERY (N_STEPS/4)  // controller-authority readout cadence (main.cu)
+#ifndef CTRL_PROBE_EVERY
+#define CTRL_PROBE_EVERY (N_STEPS/4)  // controller-authority readout cadence (main.cu) [KNOB]
+#endif
 
 // ---- Spike dump (for the offline firing animation; tools/animate.py) ---------
 // When DUMP_LEN>0 the sim records every spike (step, neuron_id) over the window

@@ -116,12 +116,15 @@ int main(int argc, char** argv) {
     printf("[knobs] W_EXC_INIT=%g W_INH_INIT=%g W_MAX=%g NU_EXT_HZ=%g W_EXT=%g RHO0_HZ=%g "
            "ISTDP_ETA=%g GAIN_ETA=%g GAIN_MIN=%g GAIN_MAX=%g STD_U=%g TAU_REC_MS=%g "
            "TAU_SYN_MS=%g LAMBDA_UM=%g TARGET_OUTDEG=%d MOD_GRID=%d AREA_GRID=%d "
-           "V_RESET_OFF=%g D_SCALE=%g N_STEPS=%d\n",
+           "V_RESET_OFF=%g D_SCALE=%g N_STEPS=%d PARADOX_INJ=%g PARADOX_START=%d PARADOX_LEN=%d "
+           "PARADOX_PERIOD=%d PARADOX_TRIALS=%d\n",
            (double)W_EXC_INIT, (double)W_INH_INIT, (double)W_MAX, (double)NU_EXT_HZ,
            (double)W_EXT, (double)RHO0_HZ, (double)ISTDP_ETA, (double)GAIN_ETA,
            (double)GAIN_MIN, (double)GAIN_MAX, (double)STD_U, (double)TAU_REC_MS,
            (double)TAU_SYN_MS, (double)LAMBDA_UM, (int)TARGET_OUTDEG, (int)MOD_GRID,
-           (int)AREA_GRID, (double)V_RESET_OFF, (double)D_SCALE, (int)N_STEPS);
+           (int)AREA_GRID, (double)V_RESET_OFF, (double)D_SCALE, (int)N_STEPS,
+           (double)PARADOX_INJ, (int)PARADOX_START, (int)PARADOX_LEN,
+           (int)PARADOX_PERIOD, (int)PARADOX_TRIALS);
 
     // ---- 1. connectome (host) --------------------------------------------------
     std::vector<float> px, py, pz;

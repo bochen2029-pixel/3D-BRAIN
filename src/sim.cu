@@ -48,6 +48,16 @@ __global__ void k_gather_integrate(
     // total input: gain scales the (summed) recurrent drive; noise is an ungained floor
     float I = s.gain[i] * g + w_ext * (float)n_ext;
 
+    // ISN paradoxical-effect probe (config.h): PARADOX_TRIALS short pulses into the INHIBITORY
+    // population, one every PARADOX_PERIOD, trial-averaged offline by tools/paradox.py.
+    // PARADOX_INJ==0 makes the first term a compile-time-known false, so this folds out entirely
+    // on every normal build.
+    if (PARADOX_INJ != 0.0f && s.is_inh[i] != 0) {
+        int rel = step - PARADOX_START;
+        if (rel >= 0 && rel < PARADOX_PERIOD * PARADOX_TRIALS && (rel % PARADOX_PERIOD) < PARADOX_LEN)
+            I += PARADOX_INJ;
+    }
+
     // Izhikevich, two half-steps for numerical stability (S4 guard)
     float v = s.v[i], u = s.u[i];
     float a = s.a[i], b = s.b[i], c = s.c[i], d = s.d[i];

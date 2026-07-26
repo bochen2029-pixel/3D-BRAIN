@@ -1225,3 +1225,117 @@ before an unqualified "Gate B PASSED": the §5.1 open question (does the sustain
 power-law statement?) is out to the web instance — the one place the bar was changed rather than
 cleared. Nothing is committed; the working tree carries Sessions 1–4.
 
+
+---
+
+## Session 4 (cont.) — 2026-07-26 — BLUEPRINT cross-reference: 2 of 3 spatial signatures present; ISN untested; the certified point is FRAGILE
+
+**Intent.** Cross-reference the certified point against `FINAL_BLUEPRINT.md` (§2.5 five-layer
+homeostatic stack, §5 phased build path, §7.4 acceptance battery) and run the two blueprint
+clauses that could still overturn the pass.
+
+**Manifest.** +`tools/spatial.py` (assemblies, metastability, travelling waves), +`tools/paradox.py`
++ `tools/sweep_paradox.ps1` (ISN paradoxical-effect test), `config.h` PARADOX_* knobs, `sim.cu`
+compile-time-gated injection into the inhibitory population, `main.cu` `[knobs]` extended. No
+contract change.
+
+### THE CROSS-REFERENCE — six gaps
+
+1. **The contradiction is in the BLUEPRINT, not just MODULE.md.** §7.4 demands avalanche α≈1.5,
+   β≈2.0, crackling and shape-collapse *and* §2.5 targets the reverberating m≈0.98 regime, which
+   is never silent and in which those statistics are undefined. This is the same incompatibility
+   Session 2 found in Gate B — **it originates in the north-star document.** §5.1's open question
+   is therefore a blueprint-level question, and that is the framing to put to the web instance.
+2. **NFR-perf MISSED.** MODULE.md §6 demands "far past real time", ≥10 000 steps/s. The certified
+   point runs **5127 steps/s, real-time factor 0.51×**. Nobody had called this. §6 says the naive
+   scatter is measured in Phase 0 precisely to set the baseline Morton must beat — that baseline
+   now exists and it is a miss.
+3. **Coupling is 12.6× the blueprint's prescription.** §2.5 specifies strong-sparse balance
+   `J_E ≈ (V_th−V_rest)/√K` = 20/√100 = **2.0 mV**; we run a unitary EPSP of **25.3 mV**, with
+   `g = w_inh/w_exc = 24.6` against the prescribed 4–8. We pass the AI battery anyway. This is the
+   same axis as the granularity hypothesis I killed on single-neuron CV_ISI evidence — the
+   blueprint independently prescribes that scaling, which is reason to hold that rejection loosely.
+4. **Three blueprint stabilizers absent:** cross-homeostasis (Mackwood 2022, called "the single
+   most important stabilizer upgrade… load-bearing"), fast inhibition τ_I < τ_E, and the global
+   circuit-breaker. **Notable: the authority fix reached the AI state without any of them.**
+5. **Never measured:** paradoxical effect, travelling waves, metastable switching, small-world
+   index, Rent's p. (Only Q = 0.707 was reported.) Items 1–3 of these are addressed below.
+6. **Fence conflict, flagged not resolved.** Blueprint Phase 0 includes "the 1-day CSR-vs-RT
+   routing micro-benchmark [VALIDATE B1]"; CLAUDE.md's phase fence bars RT/OptiX from Phase 0.
+   CLAUDE.md wins (the blueprint is "context, not the work order") so it was NOT built — but the
+   two documents disagree about a Phase-0 deliverable and that is the operator's to settle.
+
+### RESULT A — spatial structure: 2 of 3 present (`tools/spatial.py`, no new runs)
+
+| signature | certified `L_wm200_100s` | verdict |
+|---|---|---|
+| assembly structure | near-module r **+0.302**, far +0.030, noise floor 0.050 | **PRESENT** (6× floor) |
+| metastability | ACF excess over surrogate **+0.188 @100 ms, +0.103 @200 ms**, −0.037 @500 ms | **PRESENT** |
+| travelling waves | significant pairs 57.8 %, implied velocity 13 µm/ms vs axonal 300 | **ABSENT** |
+
+**This matters for §5.1.** Metastability is the blueprint's *other* named defence against "the
+soup," and it holds **independently of the avalanche clause that was retired.** The per-neuron
+pairwise correlation of +0.003 could not resolve any of this; averaging ~390 neurons per column
+lifts it out.
+
+**A false positive I caught in my own tool.** The first version reported travelling waves PRESENT
+at +69 ms/mm. Artifact: near pairs are genuinely correlated and peak at zero lag, far pairs are
+uncorrelated so their argmax is uniform over the scan window — regressing |lag| on distance
+manufactures a positive slope from that gradient alone. Tells: mean |lag| 214 ms against 250 ms
+for pure noise, and an implied velocity 23× slower than axonal conduction. Fixed with a
+significance filter on the peak plus a velocity sanity bound, and a short-trace guard (the seizing
+control's dump was 95 bins against a ±25-bin lag scan — its wave number was never trustworthy).
+
+### RESULT B — ISN paradoxical effect: UNTESTED, and two invalid designs on the way
+
+Final (paired, trial-averaged, 20 pulses each compared to its own preceding baseline):
+
+```
+control  (INJ=0)    inh +0.243 +/- 0.318 Hz        <- intrinsic fluctuation floor
+r_inj0p1 (INJ=0.1)  inh -0.205 +/- 0.576  z=-0.4   10/20 trials voided (exc collapse)
+r_inj0p3 (INJ=0.3)  inh +0.891 +/- 0.564  z=+1.6   15/20 trials voided
+```
+
+Neither clears 2σ. **The ISN claim is UNTESTED, not refuted.** The intrinsic fluctuation floor is
+as large as any perturbation small enough to stay in the linear regime.
+
+**Two invalid designs, both caught by running them:**
+- *Cross-build comparison is meaningless here.* Four runs that should have been bit-identical
+  before the injection had baselines of 3.06 / 2.25 / 3.61 / 3.35 Hz. Adding the injection branch
+  perturbs codegen and a chaotic balanced network then diverges completely within seconds. All
+  comparisons must be WITHIN a run.
+- *Amplitude saturation.* The first amplitudes (1.5, 4.0) drove exc from 3.4 Hz to **0.003 Hz**.
+  A linear-response property cannot be measured in a network knocked out of its operating point.
+  `paradox.py` now voids any trial whose exc rate halves, and says NO VALID AMPLITUDE rather than
+  reporting the sign of a saturated response.
+
+### RESULT C — the important one: THE CERTIFIED POINT IS FRAGILE
+
+The void rate is more informative than the test it was blocking. **At INJ = 0.1 — about 2 % of the
+excitatory drive onto the inhibitory population — HALF the trials collapse the excitatory
+population entirely. At 0.3, three quarters do.** A robust ISN absorbs a 2 % perturbation without
+its E population shutting off.
+
+Corroborating, from the paradox time courses: the network **spontaneously wanders between
+near-silence and ~6 Hz on a sub-second timescale** (exc 0.2 → 5.8 Hz within one second). That is
+consistent with the metastability in Result A — arguably the up/down states the blueprint wants —
+but it also means "0 % silent neurons" and "rate 3.3 Hz", both quoted from 100 s aggregates,
+average over real excursions toward silence.
+
+**⇒ B1–B7 measures TIME-AVERAGES and never probes PERTURBATION ROBUSTNESS. It therefore passes a
+network that is genuinely fragile.** This is a gap in the battery I wrote, not merely a caveat
+about this operating point, and it should be weighed before the certification is treated as
+settled. Candidate eighth clause: *survives a small perturbation without the excitatory population
+collapsing*.
+
+**Honest tally for the session:** three false positives from my own instruments today — the
+plateau-criterion argument, the wave-slope artifact, and the cross-build paradox comparison. Every
+one was caught by checking against a null or a physical sanity bound, none by inspection. That is
+the strongest available argument for keeping §5.1 genuinely open.
+
+**NEXT.** (1) §5.1 to the web instance, reframed as the blueprint-level contradiction. (2) Decide
+whether robustness becomes clause B8. (3) Powering the ISN test properly needs ~10× the trials
+(SEM ∝ 1/√n) at an amplitude below 0.05 — or an E/I-split activity trace so it does not depend on
+spike dumps. (4) NFR-perf: 0.51× real time is a standing miss; Morton is the designated fix and is
+fenced to Phase 2.
+
