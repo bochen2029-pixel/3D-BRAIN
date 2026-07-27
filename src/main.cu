@@ -243,6 +243,7 @@ int main(int argc, char** argv) {
     // ---- 5. simulation loop ----------------------------------------------------
     std::vector<int> win(PROBE_WINDOW);
     std::vector<int> dump_step, dump_id;   // sparse spike dump for the offline firing animation
+    std::vector<int> ei_exc, ei_inh, ei_buf;   // E/I-split activity trace (RATEDUMP_*)
     cudaEvent_t t0, t1; cudaEventCreate(&t0); cudaEventCreate(&t1);
     cudaEventRecord(t0);
 
@@ -269,6 +270,21 @@ int main(int argc, char** argv) {
         // record A_t (== spikes.count after gather) without a host sync
         CUDA_CHECK(cudaMemcpyAsync(activity_dev + step, spikes.count, sizeof(int),
                                    cudaMemcpyDeviceToDevice));
+        // E/I-split activity trace (RATEDUMP_LEN=0 => compiled out). Same mechanism as the spike
+        // dump but aggregated instead of stored: copy the compacted fired list, count how many
+        // are inhibitory, keep two ints. Enough to measure population E and I rates at full time
+        // resolution over a long window without a 40M-row spike dump.
+        if (RATEDUMP_LEN > 0 && step >= RATEDUMP_START && step < RATEDUMP_START + RATEDUMP_LEN) {
+            int cnt = 0; CUDA_CHECK(cudaMemcpy(&cnt, spikes.count, sizeof(int), cudaMemcpyDeviceToHost));
+            int ninh = 0;
+            if (cnt > 0) {
+                ei_buf.resize(cnt);
+                CUDA_CHECK(cudaMemcpy(ei_buf.data(), spikes.idx, (size_t)cnt*sizeof(int), cudaMemcpyDeviceToHost));
+                for (int q = 0; q < cnt; ++q) if (is_inh[ei_buf[q]]) ++ninh;
+            }
+            ei_exc.push_back(cnt - ninh); ei_inh.push_back(ninh);
+        }
+
         // sparse spike dump over the animation window (DUMP_LEN=0 => compiled out)
         if (DUMP_LEN > 0 && step >= DUMP_START && step < DUMP_START + DUMP_LEN) {
             int cnt = 0; CUDA_CHECK(cudaMemcpy(&cnt, spikes.count, sizeof(int), cudaMemcpyDeviceToHost));
@@ -351,6 +367,14 @@ int main(int argc, char** argv) {
       for (int i = 0; i < N; ++i)
         f << px[i] << ',' << py[i] << ',' << pz[i] << ',' << (int)is_inh[i]
           << ',' << (hrate[i] / dt * 1000.0f) << '\n'; }
+
+    if (!ei_exc.empty()) {
+        std::ofstream f("ei_rate.csv"); f << "step,A_exc,A_inh\n";
+        for (size_t k = 0; k < ei_exc.size(); ++k)
+            f << ((int)RATEDUMP_START + (int)k) << ',' << ei_exc[k] << ',' << ei_inh[k] << '\n';
+        printf("[eirate] %zu steps over [%d,%d) -> ei_rate.csv\n",
+               ei_exc.size(), (int)RATEDUMP_START, (int)(RATEDUMP_START + RATEDUMP_LEN));
+    }
 
     if (DUMP_LEN > 0) {
         std::ofstream f("spikes_window.csv"); f << "step,neuron\n";

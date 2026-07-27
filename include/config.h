@@ -178,6 +178,21 @@
 #define PARADOX_TRIALS   20         // number of injection trials                       [KNOB]
 #endif
 
+// ---- E/I-split activity trace (ei_rate.csv) ---------------------------------
+// activity.csv records only the total A_t, so any question about the EXCITATORY and INHIBITORY
+// populations separately has needed a full spike dump -- ~67 spikes per 0.1 ms step, i.e. far too
+// large for the ~200 perturbation trials the ISN paradoxical-effect test needs for statistical
+// power. This writes just two counts per step instead, which is ~4 orders of magnitude smaller.
+// Derived on the host from the existing compacted fired-list plus is_inh, so it needs NO change
+// to the brain.h contract (no second device counter, no new kernel). It does force a per-step
+// sync over the window, so keep the window to what the measurement needs. 0 = off.
+#ifndef RATEDUMP_START
+#define RATEDUMP_START   0
+#endif
+#ifndef RATEDUMP_LEN
+#define RATEDUMP_LEN     0          // window length in steps (0 = off)                [KNOB]
+#endif
+
 // ---- Probe / criticality ----------------------------------------------------
 #define PROBE_WINDOW     4000       // steps used for the live m-hat regression print
 #define PRINT_EVERY      4000       // progress cadence
