@@ -1,147 +1,126 @@
-# HANDOFF — 3D-BRAIN (Volumetric Brain Engine · Phase 0) — snapshot 2026-07-06
+# HANDOFF — 3D-BRAIN (Volumetric Brain Engine · Phase 0) — snapshot 2026-07-27
 
-> **Self-contained rehydration for a FRESH session (any model), written by the session that lived it.**
-> Paste this whole file in to resume. Then run the calibrated-handshake at the bottom before acting.
+> **Self-contained rehydration for a FRESH session (any model).** Read this top-to-bottom, then
+> `CLAUDE.md` (canon/fence/protocol), then the **tail** of `SESSION_LOG.md`.
+> **VERIFY BEFORE ACTING — disk wins over this doc.**
 
-## READ-FIRST / reconstitution pointer (do this in order)
-1. Read this file top-to-bottom.
-2. Read `C:\3D-BRAIN\NEXT_SESSION.md` (the crisp crib) → then the **tail** of `C:\3D-BRAIN\SESSION_LOG.md`
-   (full arc, Sessions 0–3; the last ~4 entries are Session 3 and carry the live state).
-3. Read `C:\3D-BRAIN\CLAUDE.md` (canon, phase fence, session protocol — **LAW**).
-4. **VERIFY REALITY before acting** (disk wins over this doc):
-   - `python C:\3D-BRAIN\tools\bp_validate.py` → estimator should recover m∈{0,.5,.8,.98,1}, read 0 on dead.
-   - `python C:\3D-BRAIN\tools\sweep_report.py` → the t4-corner table (Fano floor ~112 → 7004).
-   - `git -C C:\3D-BRAIN status` / `git log --oneline -5` (uncommitted; do NOT commit unless asked).
-5. **Trust the files over any recalled summary. Never resume blind.** For specifics this dump dropped,
-   grep the raw transcript: `C:\Users\user\.claude\projects\C--3D-BRAIN\b47e3c82-a866-4296-9f13-3306adf700e2.jsonl`
-   (don't read it whole — it won't fit; concept-search it, or use `C:\TRANSPORTER\claude_archive_viewer_v4.html`).
+## STATE IN ONE LINE
+**Gate B (B1–B8) PASSES** on the certified operating point across **≥3 seeds** and **both B8
+perturbation directions**, with `brain.h` amended once (RNG state removed) and `MODULE.md` §5
+rewritten to the sustained-frame battery. **The physics is done. What remains is one open
+question of principle, out for external review.**
 
 ---
 
-## CORE (never drop)
-- **Goal.** Phase 0 = **provable criticality (Gate B)** for a living, truly-3D, hierarchically-modular
-  Izhikevich spiking brain (200k neurons, modular connectome Q=0.707). "Watch it think, never dies."
-- **Current position (the verdict).** The project's **"iSTDP+gain+STD is insufficient" negative is
-  CONFIRMED — now with a trustworthy instrument and, for the first time, a NAMED mechanism.** The
-  recurrent dynamics are **intrinsically synchronizing**; the rate-homeostatic inhibition already in the
-  model produces a bursty E/I balance it structurally cannot desynchronize. **No static knob opens the
-  gap** where the reverberating regime should live (confirmed 4 independent ways).
-- **THE SINGLE NEXT ACTION.** Choose + build a **DESYNCHRONIZING mechanism**. My lean: **(i) FAST
-  feedback inhibition decoupled from rate-iSTDP** (vs (iii) synchrony-retargeted iSTDP). **This is
-  GATED**: it touches `sim.cu` (likely `brain.h` `NeuronState`/globals) ⇒ a **contract change** ⇒ STOP,
-  show diff + rationale, get operator approval FIRST. Also worth the web-instance's design read on (i) vs (iii).
-- **Hard constraints.** Canon (`brain.h` + `MODULE.md` invariants I1–I5) is **LAW** — code yields to it.
-  **Phase fence** (refuse + flag): RT cores/OptiX, Morton reorder, structural growth, real-time render,
-  dendritic/AdEx/Tensor/multi-GPU, transpose-CSR = Phase 2+. **Contract/instrument changes → flag, don't
-  silently edit.** Diff budget ≤ ~300 LOC. **Don't commit unless the operator asks.**
-- **Source of truth on disk.** `NEXT_SESSION.md` (crib) · `SESSION_LOG.md` (full arc) · this file ·
-  `memory/*.md` · the `.jsonl` transcript (backstop, grep it).
+## THE CERTIFIED POINT
+
+```
+N=200000  W_EXC_INIT=5  W_INH_INIT=4  W_MAX=200  ISTDP_ETA=0.2  GAIN_ETA=1e-4
+GAIN_MIN=0.1  W_EXT=80  NU_EXT_HZ=5  STD_U=0.2  TAU_REC_MS=400  N_STEPS=1e6 (100 s)
+```
+Reference runs: `run/V_s1234`, `V_s7`, `V_s99` (seeds), `V_b8p` / `V_b8m` (B8 ±2 %).
+Build/run: `pwsh tools/recertify.ps1`, then `python tools/analyze.py run/V_s1234`.
+
+| clause | requirement | measured (3 seeds) |
+|---|---|---|
+| B1 near-critical | 0.9 < m̂ < 1.02 | **0.982** |
+| B2 scale-invariant | plateau spread < 0.03 | **0.012–0.016 FLAT** |
+| B3 not seizing / not floor | Fano 2–20, 0 % silent | **8.1–8.5**, 0 %, maxA/N 0.09 % |
+| B4 asynchronous | \|r\| < 0.05 | **+0.0014 … +0.0030** |
+| B5 irregular | CV_ISI median 0.8–1.2, majority in band | **0.93–1.00**, 80–83 % |
+| B6 self-sustaining on recurrence | ≥10× drive cut, recurrent ≫ ext | **102–119× recurrent** |
+| B7 two controllers off rails | gain railed < 20 %, stationary, on target | **gain 0.41, 4.4 % railed** |
+| B8 robust to ±2 % perturbation | B1–B6 still hold | **PASS both directions** |
+
+Not clauses, but measured (`tools/spatial.py`): **assembly structure PRESENT** (near-module
+r ≈ +0.29 vs a 0.050 floor, far +0.035), **metastability PRESENT** (ACF excess +0.12 @200 ms),
+**travelling waves ABSENT**. Under B8 perturbation metastability drops to +0.079 — *below* the
+0.10 line used for the ABSENT/PRESENT call. Borderline; recorded, not buried.
 
 ---
 
-## RING 1 — active state, open threads, decisions + WHY
+## WHAT CHANGED IN SESSION 4 (the whole arc, compressed)
 
-**The whole arc collapses to one story:** we replaced a broken/contradictory acceptance test with a
-trustworthy one, and it revealed the real blocker is **population synchrony**, not branching.
+The session opened under a standing mandate to build a **contract-touching desynchronizing
+mechanism**, because "the reverberating regime is ABSENT, confirmed four ways." **That was wrong.**
 
-1. **THE REFRAME (web-Claude #8).** Gate B was internally contradictory — it demanded self-sustaining
-   activity (reverberating picture, Wilting–Priesemann, m̂≈0.98 = real cortex) AND silence-separated
-   shape-collapsing avalanches (absorbing picture, Beggs–Plenz). Incompatible. The project's vision is
-   the **reverberating/sustained** frame. ⇒ dropped shape-collapse-on-silence; certify via branching
-   ratio on continuous activity. **But the linchpin (the MR estimator) read ~0.99 on DEAD nets too**, so
-   it had to be fixed FIRST or the reframe was motivated reasoning.
-2. **Estimator FIXED + VALIDATED (the make-or-break, DONE).** `analyze.py::mr_branching_ratio` rewritten:
-   **liveness gate** (dead→0) + **edge-normalized high-pass detrend** (kills homeostat drift, the
-   Priesemann-Shriki contamination) + **offset-exponential fit** `r_k=b·m^k+c` + **b-significance guard**
-   (absence-of-branching → 0, not exp(0)=1). Validated on synthetic BP of known m (`tools/bp_validate.py`:
-   recovers {0,.5,.8,.98,1}, drift-robust) and real dead-vs-alive traces (`tools/real_check.py`).
-   **The ruler now discriminates.**
-3. **The SATURATION catch (web) → admissibility probe (`tools/admiss.py`).** m̂ was reading ~0.99 on the
-   "alive" points — but they're NOT saturated (mean/N≈0.0005, sparse per-neuron; the "82/99% active" was
-   fraction-of-*bins* not neurons). They're **synchronized-BURSTING**: Fano in the thousands, 25k-neuron
-   population spikes. m̂ is **inadmissible** there (bin-unstable 0↔0.99). **Fano = the discriminator**
-   (≈1 Poisson/pinned, ≫1 bursty); m̂ can't tell reverberating from seizing.
-4. **THE VOID.** Across 77 self-sustaining points: **52 at Fano≈1 (Poisson drive-floor, m̂=0), 22 at
-   Fano>2000 (synchronized bursting), ~nothing in Fano 2–20.** The gentle-criticality / asynchronous-
-   irregular (AI) band where reverberation lives is **empty**. The reverberating regime is absent.
-5. **t4-corner sweep — PRE-REGISTERED, void=null (`sweep_t4.ps1`+`sweep_report.py`). H1 REJECTED.**
-   Recurrent Fano **floors at ~112** (t4/x_we3), climbs **smoothly** to 7004 (W_EXC 3→9) — not a
-   knife-edge; t4 is the least-bursty point of an ALWAYS-bursty branch, not a hidden band. `plfit` refutes
-   a clean power-law at t4 (KS 0.31, mid-tail). **E/I test NULL + mechanism found:** raising W_INH 4→10→16
-   gave **byte-identical** operating points — because iSTDP (`sim.cu:107–110`, `dw=η·(x_trace−α)`) slaves
-   inhibitory weight to the RATE target and washes out W_INH_INIT. **Static inhibitory gain is NOT a lever.**
-6. **D_SCALE adaptation sweep — candidate (ii) spike-freq-adaptation. REJECTED (`sweep_dscale.ps1`).**
-   Stronger adaptation weakly dampens seizing (7004→1443; 1178→702) but **never reaches the band** (best
-   ~700), **costs activity** (meanA halves toward death), and on the least-bursty base **INCREASES** Fano
-   (112→316; adaptation's slow timescale *promotes* synchrony). No alive-in-band window.
-7. **⇒ NO-CONTRACT LEVERS EXHAUSTED** (recurrence, drive, static inhibition-gain, adaptation-magnitude).
-   The void is structural. **Mandate = a desynchronizing mechanism, necessarily contract-touching.**
-   σ-homeostat (per-neuron gain) is DOUBLY wrong (rate-nullified + can't fight synchrony) — dropped.
-
-**Web-Claude's E/I guidance (the load-bearing recent directive, distilled verbatim-faithful):**
-> "A synchronized population spike is a *network* instability — runaway recurrent excitation that
-> inhibition fails to catch fast enough. The knob is the E/I operating point and the **speed/gain of
-> inhibitory feedback** (the inhibition-stabilized-network regime, Mackwood's territory), not per-neuron
-> excitability. Lower every neuron's gain and you get a *sparser* bursting network — you haven't touched
-> the mechanism that makes them fire *together*. The Fano void — near-discontinuous Poisson→synchrony
-> with nothing between — is the classic signature of a system with **no stable asynchronous-irregular
-> fixed point**, which is exactly what fast feedback inhibition exists to create. So the actuator is E/I
-> feedback (fast inhibition), σ-homeostat is at most a secondary fine-tune *once a stable AI regime
-> exists to fine-tune within*." Plus the calibration note: **"let the void be a finding if it wants to
-> be — the version where you don't find your reverberating point is the more valuable, more publishable
-> result, and the one it'll be tempting to sweep-one-more-corner to avoid."** (We held that line.)
+- **The void was an artifact of saturated homeostats.** At every operating point in the project's
+  history the inhibitory weight sat pinned at `W_MAX` and the gain was railed at `GAIN_MIN` on
+  99.9 % of neurons — and *nothing in a run's output could reveal it*. Of the nine knobs the
+  Gate-B search nominally covered, only four had ever been varied. Raising controller authority
+  (`ISTDP_ETA`, `W_MAX`, `GAIN_MIN`) reaches the asynchronous-irregular regime with **no
+  desynchronizing mechanism at all**. The mandate is withdrawn.
+- **`MODULE.md` §5 replaced** with B1–B8 + run-length (≥100 s) + ≥3-seed clauses; §5.1 records the
+  retired avalanche/crackling clauses **and what retiring them costs**.
+- **`brain.h` amended (2026-07-27):** `NeuronState.rng` and `k_init_rng` removed, `seed` added to
+  `k_gather_integrate`. Philox is counter-based, so the drive stream is regenerated from
+  `(seed, neuron, step)`. Frees 12.8 MB VRAM and ~25.6 MB/step of traffic.
+- **`MODULE.md` §6 amended:** the binding constraint is **regime- and version-dependent**. With the
+  RNG state stored it read gather 54 % / scatter 40 %; with it removed, gather 35–42 % / scatter
+  55–62 %. The RNG state had been *masking* the true constraint; the blueprint's scatter claim is
+  right once it is gone.
+- **Deliverables exist:** `brain3d.html` (the §1 offline 3D view), `firing.gif`, `criticality.png`,
+  `pointcloud.png`, and `run/ai_vs_seizing.png` (certified vs seizing, same renderer).
 
 ---
 
-## RING 2 — completed work (terse; verifiable from files/git)
-- **Sessions 0–2:** built the engine (`src/{connectome,sim,main}.cu`), the hierarchical-modular
-  connectome (Q=0.707), synaptic summation (TAU_SYN, the fix that let a lone spike propagate), STD,
-  iSTDP+gain; reached a "structural negative" (later reframed). Full detail in `SESSION_LOG.md`.
-- **Session 3 (this session):** estimator fix+validation → admissibility probe → t4 sweep → D_SCALE
-  sweep. Each result is a table in `SESSION_LOG.md`.
-- **Instrument/tools built (`tools/`):** `bp_validate.py` (synthetic known-m validator), `real_check.py`
-  (dead-vs-alive), `admiss.py` (Fano/CV/mean-N/m̂-bins), `binsweep.py` (bin-width + Fano landscape),
-  `sweep_t4.ps1`+`sweep_report.py` (corner adjudicator, Fano+plateau; report takes labels via argv),
-  `sweep_dscale.ps1`, `plfit.py` (Vuong LLR power-law vs lognormal/dragon-king), `analyze.py` (Gate-B
-  scorecard — **verdict still shape-collapse-primary; retiring that for the sustained frame is deferred
-  work, flagged**), `viz3d.py`/`animate.py` (offline 3D + firing GIF).
+## OPEN — in priority order
 
-## Key operational facts
-- **Toolchain:** RTX 4070 Ti SUPER (sm_89), CUDA 13.1, CMake 4.3.3, VS2022 MSVC, Win11 + PowerShell.
-  Canonical build: `cmake --build build --config Release`. **Per-point sweeps use raw nvcc** — MUST
-  import `vcvars64.bat` first (the sweep `.ps1`s do this via `vswhere`) or "cannot find cl.exe".
-  nvcc line: `-std=c++17 -O3 -use_fast_math -arch=sm_89 -cudart static -I include -Xcompiler=/MT,... -lcurand`.
-- **Scale/params:** `N_NEURONS=200000`, `N_STEPS=200000` (20 s @ DT=0.1 ms). Generation scale ≈ **5–10
-  bins** (1 bin=30 µm axon; λ=150 µm; COND_VEL=300 µm/ms). Servo/estimator bin = generation scale, NOT 1.
-- **Metrics:** **Fano=var/mean** (≈1 Poisson, ≫1 bursty — THE synchrony discriminator). **m̂-plateau**:
-  flat across bins ≈ scale-invariant/critical, `m^b`-slope = artifact. **admissible m̂** needs sustained
-  activity (act% not tiny) + non-pinned + bin-stable.
-- **Key run dirs:** dead baseline `run/r00_baseline`, Poisson `run/r01_drive`; alive-but-bursty
-  `run/dec_nu8` (Fano 14k), `run/u3_long`/`u4_long`; sweep `run/x_we*` (t4 corner), `run/d{3,6,9}_ds*`
-  (adaptation). t4 = `run/t4_wx80_nu100` = {W_EXC=3, W_INH=4, W_EXT=80, ν=100, STD_U=0.2, TAU_REC=400}.
-- **PowerShell gotchas (bit us):** use the **PowerShell tool** for Windows paths (the Bash tool strips
-  backslashes). Vars are **case-INSENSITIVE** (`$D` clobbers `$d`). Unset env with `Remove-Item Env:\X`
-  (not `SetEnvironmentVariable($null)`). Run built exes in a clean process (no stale BRAIN_* env).
-- **Git:** on `master`, large uncommitted diff. Do NOT commit unless the operator asks.
-- **Operator (Bo Chen):** solo contract-first builder; grants broad autonomy ("do whatever it takes")
-  BUT wants Phase-2+ scope creep refused, contract/instrument edits flagged, and **honest
-  dead/seizing/soup/critical verdicts over a manufactured pass**. Consults a "web Claude" instance for
-  sharp reviews and relays them here — the collaboration has been genuinely load-bearing.
+1. **§5.1: does the sustained frame still owe a power-law statement?** `RELAY_TO_WEB.md` is written
+   and paste-ready for the web-Claude consult. **Key reframing found late: the contradiction is in
+   `FINAL_BLUEPRINT.md` itself** — §7.4 demands avalanche α/β/crackling/shape-collapse while §2.5
+   targets the never-silent reverberating regime where those are undefined. This is a
+   blueprint-level question, not a `MODULE.md` one. **Nothing should be called an unqualified Gate
+   B pass until this lands.**
+2. **Transient robustness.** B8 is a *steady-state* test by construction (it reuses B1–B6 to avoid
+   an arbitrary threshold) and therefore cannot see the finding that motivated it: a *sudden* 2 %
+   pulse into the inhibitory population still collapses the excitatory rate below a tenth of
+   baseline in ~26 % of trials, always recovering. Whether collapse-and-recover is disqualifying
+   is **OPEN** — a transient clause would need exactly the threshold B8 avoids.
+3. **ISN paradoxical effect: UNTESTED**, not refuted. The intrinsic fluctuation floor (±0.3 Hz over
+   20 paired trials) is as large as any perturbation small enough to stay in the linear regime.
+   Needs ~10× the trials, or an **E/I-split activity trace** (would require a second counter in
+   `SpikeList` ⇒ contract change).
+4. **Blueprint gaps not built:** cross-homeostasis (Mackwood 2022 — the blueprint calls it "the
+   single most important stabilizer upgrade"), fast inhibition τ_I < τ_E, circuit-breaker. **The AI
+   state was reached without any of them**, which is itself a result worth reporting.
+5. **Fence conflict to settle:** blueprint Phase 0 includes the CSR-vs-RT routing micro-benchmark;
+   `CLAUDE.md`'s fence bars RT/OptiX from Phase 0. The fence won; the documents disagree.
 
 ---
 
-## CALIBRATED HANDOFF — do this before taking over (Procedure C)
-You are the fresh session. Do NOT just start executing. First:
-1. Run the VERIFY-REALITY checks above; confirm the estimator validates and the sweep tables match
-   (Fano floor ~112 → 7004; adaptation never reaching the band).
-2. **Interrogate back to the operator:** state the position as you now understand it and post your
-   concrete questions — e.g. *"Confirm the next move is designing the (i) fast-inhibition mechanism as a
-   review-only diff (no code) pending approval? Do you want the web-instance's (i)-vs-(iii) read first?
-   Any change since the snapshot?"* Get correction before acting.
-3. Only after the operator acknowledges → proceed. For the first mechanism step, remember the **GATE**:
-   fast-inhibition touches `sim.cu`/`brain.h` ⇒ show a diff + rationale and get approval; do not write
-   committed code first. A safe no-contract first deliverable = the **mechanism design proposal**
-   (what the fast-inhibition term looks like, the state/globals it needs, the new `[KNOB]`s, a `brain.h`
-   diff PREVIEW) for review.
-4. Verify any built mechanism with `admiss.py` (does Fano drop into 2–20 while alive?) + `sweep_report.py`
-   plateau + `plfit`. Append a `SESSION_LOG.md` entry. Don't declare a pass by vibes.
+## OPERATIONAL FACTS
+
+- **Toolchain:** RTX 4070 Ti SUPER (sm_89), CUDA 13.1, CMake 4.3.3, VS2022, Win11 + PowerShell.
+  Canonical build `cmake --build build --config Release`. Per-point sweeps use raw `nvcc` and MUST
+  import `vcvars64.bat` first (the `.ps1` harnesses do it via `vswhere`).
+- **Instruments:** `analyze.py` (B1–B8 scorecard; `[rundir] [--append]`), `airegime.py` (CV_ISI,
+  pairwise r vs its noise floor, per-neuron Fano), `spatial.py` (assemblies, metastability, waves),
+  `paradox.py` (ISN test + `--robust`), `admiss.py`, `bp_validate.py`, `plfit.py`, `sweep_report.py`,
+  `viz3d.py`, `animate.py`. Harnesses: `sweep_{ei,drive,gain,headroom,gaineta,b8,dump,paradox}.ps1`,
+  `recertify.ps1`.
+- **Every run self-documents:** `[knobs]` line (full config) and `[ctrl]` readout (controller rail
+  occupancy) — added because a knob that was never varied stayed invisible for 32 sweep rows.
+  `BRAIN_PROFILE=<n>` gives a per-kernel breakdown.
+- **`sweep_log.csv`** is the B-schema log. Pre-amendment history is preserved verbatim in
+  `sweep_log_preB.csv` — its rows **cannot** be rescored (no `[ctrl]`, no spike dumps).
+- **PERF MEASUREMENT IS UNRELIABLE ON THIS MACHINE.** Identical binaries have measured
+  4922–16411 steps/s — a **3.3× spread**. Two perf claims were made and withdrawn this session for
+  exactly this reason. **Never quote a perf number from a single run.**
+- **PowerShell gotchas:** variables are case-INSENSITIVE; unset env vars with `$env:X = $null`;
+  `Remove-Item` on paths under `C:\3D-BRAIN` trips a protection guard — avoid it in scripts.
+- **Git:** on `master`, pushed to `github.com/bochen2029-pixel/3D-BRAIN` (**public**). `run/` and
+  `build/` are gitignored.
+
+---
+
+## CALIBRATION — read this before trusting any conclusion
+
+Session 4 produced **six** claims from its own instruments that later measurement refuted: the
+granularity hypothesis; the iSTDP Δw arithmetic (wrong 13×); the argument that the plateau
+criterion was backwards; a travelling-wave slope that was a correlated-vs-noise artifact; a
+cross-build paradox comparison invalidated by chaotic divergence; and two separate perf claims.
+**Every one was caught by checking against a null, a surrogate, or a physical sanity bound — none
+by inspection.** The instruments in `tools/` now embed those nulls deliberately (noise floors,
+time-shuffled surrogates, void checks, short-trace guards). Keep them. When a result looks clean,
+find the null it should be compared against before reporting it.
