@@ -12,18 +12,12 @@
 #include <cmath>
 #include <vector>
 
-// ---------- RNG init ---------------------------------------------------------
-__global__ void k_init_rng(curandStatePhilox4_32_10_t* rng, int N, unsigned seed) {
-    int i = blockIdx.x * blockDim.x + threadIdx.x;
-    if (i >= N) return;
-    curand_init(seed, (unsigned long long)i, 0ULL, &rng[i]);
-}
-
 // ---------- gather + integrate ----------------------------------------------
 __global__ void k_gather_integrate(
     NeuronState s, DelayRing ring, SpikeList spikes,
     int N, int step, float dt_ms,
-    float nu_ext_hz, float w_ext, float trace_decay, float rate_decay)
+    float nu_ext_hz, float w_ext, float trace_decay, float rate_decay,
+    unsigned seed)
 {
     int i = blockIdx.x * blockDim.x + threadIdx.x;
     if (i >= N) return;
@@ -39,23 +33,15 @@ __global__ void k_gather_integrate(
     float g = s.g_syn[i] * expf(-dt_ms / TAU_SYN_MS) + I_rec;
     s.g_syn[i] = g;
 
-    // external Poisson noise floor
+    // External Poisson noise floor. Philox is counter-based, so the generator state is
+    // regenerated here from (seed, neuron, step) rather than stored per neuron and rewritten
+    // every step -- that storage was ~25.6 MB/step of traffic at N=200k and 30% of this kernel.
+    // Distinct subsequence per neuron and offset per step is the standard Random123 addressing:
+    // streams cannot overlap, and a draw no longer depends on how many draws preceded it.
     float mean = nu_ext_hz * dt_ms * 0.001f;  // expected ext spikes this step
-#if RNG_STATELESS
-    // TIMING PROBE ONLY -- prices the stored RNG state for the brain.h proposal.
-    // Philox is counter-based, so the state can be regenerated from (seed, i, step) instead of
-    // being read AND written every step for all N (~64 B x 2 x N of traffic). The real change
-    // needs `seed` as a kernel argument, which is a brain.h signature change; this probe uses a
-    // literal so it can be measured WITHOUT touching the contract. Dynamics under this flag are
-    // NOT comparable to a normal build -- it exists to time the gather, nothing else.
     curandStatePhilox4_32_10_t st;
-    curand_init(1234u, (unsigned long long)i, (unsigned long long)step, &st);
+    curand_init(seed, (unsigned long long)i, (unsigned long long)step, &st);
     unsigned n_ext = curand_poisson(&st, mean);
-#else
-    curandStatePhilox4_32_10_t st = s.rng[i];
-    unsigned n_ext = curand_poisson(&st, mean);
-    s.rng[i] = st;
-#endif
 
     // total input: gain scales the (summed) recurrent drive; noise is an ungained floor
     float I = s.gain[i] * g + w_ext * (float)n_ext;
@@ -124,31 +110,39 @@ __global__ void k_scatter(
     NeuronState s, Connectome c, DelayRing ring, SpikeList spikes,
     int N, int step, float istdp_eta, float istdp_alpha, float w_max)
 {
-    int f = blockIdx.x * blockDim.x + threadIdx.x;
-    if (f >= *spikes.count) return;
-
+    // Grid-strided over the fired list so the launch width is independent of the kernel's
+    // correctness. NOTE: a hypothesis that a SMALLER grid would be faster (the N-sized launch
+    // starts 200k threads so ~70 can work) was tested 2026-07-27 and NOT supported -- changing
+    // the launch width changes atomicAdd ordering, which diverges the chaotic trajectory, so the
+    // runs sampled different activity levels and the comparison was confounded, with the widest
+    // grid fastest anyway. Launch width stays sized for N until a fixed-spike-count
+    // micro-benchmark says otherwise.
+    const int cnt = *spikes.count;
     const int D = N_DELAY_BINS;
-    int i = spikes.idx[f];
-    bool inh = (s.is_inh[i] != 0);
-    float Di = s.D[i];                                // presynaptic STD efficacy in (0,1]
+    for (int f = blockIdx.x * blockDim.x + threadIdx.x; f < cnt;
+         f += blockDim.x * gridDim.x) {
+        int i = spikes.idx[f];
+        bool inh = (s.is_inh[i] != 0);
+        float Di = s.D[i];                                // presynaptic STD efficacy in (0,1]
 
-    int start = c.row_ptr[i], end = c.row_ptr[i + 1];
-    for (int e = start; e < end; ++e) {
-        int j       = c.col_idx[e];
-        float w     = c.weight[e];
-        uint8_t db  = c.delay_bin[e];
-        int dslot   = (step + (int)db) % D;
+        int start = c.row_ptr[i], end = c.row_ptr[i + 1];
+        for (int e = start; e < end; ++e) {
+            int j       = c.col_idx[e];
+            float w     = c.weight[e];
+            uint8_t db  = c.delay_bin[e];
+            int dslot   = (step + (int)db) % D;
 
-        float contrib = inh ? -(w * Di) : (w * Di);   // STD-scaled efficacy; sign by source
-        atomicAdd(&ring.buf[(long)dslot * N + j], contrib);   // THE hot scatter
+            float contrib = inh ? -(w * Di) : (w * Di);   // STD-scaled efficacy; sign by source
+            atomicAdd(&ring.buf[(long)dslot * N + j], contrib);   // THE hot scatter
 
-        // forward-only inhibitory STDP: drive postsynaptic rate toward target.
-        // dw>0 when post trace exceeds alpha (post too active) => more inhibition.
-        if (inh) {
-            float dw = istdp_eta * (s.x_trace[j] - istdp_alpha);
-            w += dw;
-            w = fminf(fmaxf(w, 0.0f), w_max);
-            c.weight[e] = w;                          // we own row i => no race
+            // forward-only inhibitory STDP: drive postsynaptic rate toward target.
+            // dw>0 when post trace exceeds alpha (post too active) => more inhibition.
+            if (inh) {
+                float dw = istdp_eta * (s.x_trace[j] - istdp_alpha);
+                w += dw;
+                w = fminf(fmaxf(w, 0.0f), w_max);
+                c.weight[e] = w;                          // we own row i => no race
+            }
         }
     }
 }

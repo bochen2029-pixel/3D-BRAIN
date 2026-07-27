@@ -1518,3 +1518,70 @@ authority behind it — whereas a missed 1.2× does not.
 
 **Neither change is required for Gate B.** The certified point stands either way. Morton remains
 un-built and fenced.
+
+---
+
+## Session 4 (cont.) — 2026-07-27 — Both contract changes APPLIED; Gate B re-certified; a perf-measurement correction
+
+**Intent.** Apply the two operator-approved contract changes and **re-certify**, since change A
+alters the RNG stream and therefore makes every previously certified result a different
+realisation of the same operating point.
+
+**Manifest (CONTRACT CHANGE — operator-approved).** `brain.h`: `NeuronState.rng` removed,
+`k_init_rng` removed, `seed` added to `k_gather_integrate`. `sim.cu`: external-drive Philox
+regenerated from `(seed, neuron, step)`; `k_scatter` now grid-strided. `main.cu`: allocation and
+init launch dropped, call sites updated. `MODULE.md` §6 rewritten. `config.h`: `RNG_STATELESS`
+probe removed (promoted into the contract). +`tools/recertify.ps1`.
+
+**RESULT 1 — the certification SURVIVES the amendment. B1–B8 on 3 seeds.**
+
+| run | B1 m̂ | B2 | B3 Fano | B4 r | B5 CV_ISI | B6 | B7 | verdict |
+|---|---|---|---|---|---|---|---|---|
+| V_s1234 | 0.982 | FLAT .016 | 8.12 | +0.0030 | 1.001 | 114× | 0.419 / 4.4 % | **PASS** |
+| V_s7 | 0.982 | FLAT .014 | 8.50 | +0.0014 | 0.929 | 102× | 0.412 / 4.4 % | **PASS** |
+| V_s99 | 0.982 | FLAT .012 | 8.17 | +0.0018 | 1.002 | 119× | 0.417 / 4.5 % | **PASS** |
+| V_b8p (+2.1 %) | 0.986 | FLAT .010 | 7.58 | +0.0023 | 0.909 | 118× | — | **PASS** → B8 |
+| V_b8m (−1.9 %) | 0.978 | FLAT .014 | 7.71 | +0.0040 | 1.018 | 134× | — | **PASS** → B8 |
+
+Every clause on every run. The regime is unchanged by the contract amendment, as the 4-seed and
+20×-GAIN_ETA-band evidence predicted — but it was **measured, not assumed**, which was the point.
+
+**RESULT 2 — §6 rewritten, and NOT with the numbers I proposed.** I had asserted "gather 54 %,
+scatter 40 %" into §6. That was measured on the **pre-change** code. Repeated profiles after
+removing the stored RNG state:
+
+| | gather | scatter |
+|---|---|---|
+| RNG state stored (old contract) | **54–56 %** | 40–43 % |
+| RNG state removed (current) | 35–42 % | **55–62 %** |
+
+**The stored RNG state was masking the true binding constraint.** With it gone the scatter binds —
+which **vindicates** the blueprint's original claim rather than refuting it. Changes A and B were
+proposed as independent; they are not, and A invalidated B's finding. §6 now records both rows,
+the regime-dependence, and the requirement to state which contract version and regime a perf claim
+was measured in.
+
+**RESULT 3 — a hypothesis tested and REJECTED.** The scatter looked launch-bound (N-sized grid
+starts 200 k threads so ~70 can work; timing uncorrelated with edge count over a 2.4× range). A
+`SCATTER_BLOCKS` knob was built to test it and **reverted**: changing launch width changes
+atomicAdd ordering → float rounding → chaotic divergence, so runs sampled different phases of the
+network's slow fluctuation (A_t alternating 31.3/68.7 at the same seed) and the widest grid was
+fastest anyway. §6 now carries the lesson: scatter optimisations must be validated on a
+**fixed-spike-count micro-benchmark**, not a live run — directly relevant to how Phase 2 should
+evaluate Morton.
+
+**CORRECTION — the perf claim, qualified.** I reported "14 700–16 400 steps/s ≈ 1.5–1.6×,
+comfortably past NFR-perf". The very next batch of five runs gave **7916 / 6580 / 10355 / 9537 /
+4922**. Not thermal (GPU 42–45 °C, no throttle flags): the recertify batch ran five runs
+back-to-back each flushing ~140 MB of CSV, and `[timing]` brackets the loop with CUDA events, so
+**CPU-side enqueue stalls inflate it even when the GPU is healthy**. Controlled repeats — same
+binary, same seed, isolated — are consistent at **14 375 / 15 069 / 15 527**. So:
+
+- **Like-for-like isolated: ~9 700 → ~15 000 steps/s, ≈1.55×.** That comparison is sound.
+- **`[timing]` is not robust to system load — a 2–3× spread was observed today.** It must never be
+  quoted from a single run, and any perf claim needs isolated repeats. This is the second time
+  today a single-run perf number misled me (the withdrawn 0.51× NFR "miss" was the first).
+
+**Standing.** B1–B8 hold on 3 seeds under the amended contract; perf ≈1.5× real time isolated.
+Still open and unchanged: §5.1 (blueprint-level power-law contradiction), transient robustness,
+the ISN paradoxical effect (untested), and whether the gather/scatter split holds at target scale.

@@ -27,7 +27,12 @@ struct NeuronState {
     float*  px;       // geometry, kept for render + delay derivation + analysis
     float*  py;
     float*  pz;
-    curandStatePhilox4_32_10_t* rng;
+    // NO stored RNG state. Philox is counter-based (Random123), so the external-drive stream is
+    // regenerated per call from (seed, neuron_id, step). Storing it cost ~64 B read AND written
+    // every step for every neuron -- ~25.6 MB/step at N=200k, measured as 30% of the gather
+    // kernel (68.5 -> 47.7 us/step) and 12.8 MB of VRAM. Determinism is preserved and
+    // strengthened: a draw no longer depends on how many draws preceded it.
+    // (Contract amendment 2026-07-27, CONTRACT_CHANGES_PROPOSED.md change A.)
 };
 
 // ---- CSR connectome (device). Row = PRESYNAPTIC neuron. ----------------------
@@ -67,14 +72,17 @@ long build_connectome_host(
 // =============================================================================
 //  DEVICE KERNELS (the contract — implemented in sim.cu)
 // =============================================================================
-__global__ void k_init_rng(curandStatePhilox4_32_10_t* rng, int N, unsigned seed);
+// (k_init_rng removed 2026-07-27 — there is no persistent RNG state left to initialise.)
 
 // Read arriving current, add noise, apply gain, integrate Izhikevich, detect
 // spikes, update traces + rate, compact fired neurons. One thread per neuron.
+// `seed` is the run seed: the external-drive RNG is counter-based and its state is
+// regenerated per call from (seed, neuron_id, step) rather than stored per neuron.
 __global__ void k_gather_integrate(
     NeuronState s, DelayRing ring, SpikeList spikes,
     int N, int step, float dt_ms,
-    float nu_ext_hz, float w_ext, float trace_decay, float rate_decay);
+    float nu_ext_hz, float w_ext, float trace_decay, float rate_decay,
+    unsigned seed);
 
 // One thread per FIRED neuron (grid sized for N; threads past *spikes.count return).
 // Scatters weighted current into the delay ring and applies forward-only iSTDP.

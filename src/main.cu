@@ -157,7 +157,8 @@ int main(int argc, char** argv) {
     s.D=dcopy(hone);        // STD synaptic efficacy starts fully recovered (=1)
     s.g_syn=dcopy(hzero);   // decaying synaptic current starts empty
     s.px=dcopy(px); s.py=dcopy(py); s.pz=dcopy(pz);
-    s.rng = dmalloc<curandStatePhilox4_32_10_t>(N);
+    // no s.rng: the external-drive Philox stream is counter-based and regenerated per call
+    // from (seed, neuron, step). Saves 12.8 MB here and ~25.6 MB/step of traffic in the gather.
 
     Connectome c{}; c.M=M;
     c.row_ptr=dcopy(row_ptr); c.col_idx=dcopy(col_idx);
@@ -177,7 +178,6 @@ int main(int argc, char** argv) {
     // iSTDP set-point (forward-only, single depression term): equilibrium post-rate ~ RHO0
     const float istdp_alpha = (RHO0_HZ * 0.001f) * TAU_STDP_MS;
 
-    k_init_rng<<<gridN, block>>>(s.rng, N, seed);
     CUDA_CHECK(cudaGetLastError());
     CUDA_CHECK(cudaDeviceSynchronize());
 
@@ -202,7 +202,7 @@ int main(int argc, char** argv) {
             int settle = atoi(se); if (settle < 1000) settle = 30000;
             for (int step = 0; step < settle; ++step) {
                 CUDA_CHECK(cudaMemsetAsync(spikes.count, 0, sizeof(int)));
-                k_gather_integrate<<<gridN, block>>>(s, ring, spikes, N, step, dt, NU_EXT_HZ, W_EXT, trace_decay, rate_decay);
+                k_gather_integrate<<<gridN, block>>>(s, ring, spikes, N, step, dt, NU_EXT_HZ, W_EXT, trace_decay, rate_decay, seed);
                 k_scatter<<<gridN, block>>>(s, c, ring, spikes, N, step, ISTDP_ETA, istdp_alpha, W_MAX);
                 if (step % GAIN_EVERY == 0) k_homeostatic_gain<<<gridN, block>>>(s, N, dt, RHO0_HZ, GAIN_ETA, GAIN_MIN, GAIN_MAX);
             }
@@ -223,7 +223,7 @@ int main(int argc, char** argv) {
             for (int step = 0; step < TEST_STEPS; ++step) {
                 CUDA_CHECK(cudaMemsetAsync(spikes.count, 0, sizeof(int)));
                 k_gather_integrate<<<gridN, block>>>(s, ring, spikes, N, step, dt,
-                                                     0.0f, W_EXT, trace_decay, rate_decay);
+                                                     0.0f, W_EXT, trace_decay, rate_decay, seed);
                 int cnt; CUDA_CHECK(cudaMemcpy(&cnt, spikes.count, sizeof(int), cudaMemcpyDeviceToHost));
                 total += cnt;
                 if (step >= 1 && step <= WIN) a1 += cnt;   // A1 = first-generation descendants
@@ -264,7 +264,7 @@ int main(int argc, char** argv) {
         if (prof) CUDA_CHECK(cudaEventRecord(pe[0]));
         CUDA_CHECK(cudaMemsetAsync(spikes.count, 0, sizeof(int)));
         k_gather_integrate<<<gridN, block>>>(s, ring, spikes, N, step, dt,
-                                             NU_EXT_HZ, W_EXT, trace_decay, rate_decay);
+                                             NU_EXT_HZ, W_EXT, trace_decay, rate_decay, seed);
         if (prof) CUDA_CHECK(cudaEventRecord(pe[1]));
         // record A_t (== spikes.count after gather) without a host sync
         CUDA_CHECK(cudaMemcpyAsync(activity_dev + step, spikes.count, sizeof(int),
@@ -363,3 +363,5 @@ int main(int argc, char** argv) {
     printf("=== done. run:  python tools/analyze.py   (rigorous m_hat + power-law fit) ===\n");
     return 0;
 }
+
+

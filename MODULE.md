@@ -195,10 +195,28 @@ were unmet for the project's entire history.
 - **NFR-determinism:** Fixed `seed` ⇒ fixed connectome + Poisson stream ⇒
   reproducible `A_t` (modulo atomic-add float ordering, which perturbs but does not
   destroy the statistics). Needed so the battery is a stable signal.
-- **NFR-binding-constraint (validate):** the hot path is the **scattered atomic RMW**
-  into the delay ring — the same term FINAL_BLUEPRINT names as the real ceiling.
-  Phase 0 does it naive (un-Morton'd) on purpose; measuring it here sets the
-  baseline Morton must beat later.
+- **NFR-binding-constraint (MEASURED 2026-07-27 — the blueprint is right, but only once the
+  gather is not carrying avoidable traffic):** FINAL_BLUEPRINT names the **scattered atomic RMW**
+  into the delay ring as the real ceiling. Measured at the certified sparse operating point with
+  `BRAIN_PROFILE`, over repeated runs:
+  | | gather | scatter | gain |
+  |---|---|---|---|
+  | with per-neuron RNG state stored (pre-2026-07-27 contract) | **54–56 %** | 40–43 % | ~5 % |
+  | after removing it (current contract) | 35–42 % | **55–62 %** | ~1 % |
+
+  So the stored RNG state was **masking the true binding constraint**: it made the gather look
+  dominant. With it gone the **scatter binds**, as the blueprint says. Two standing rules follow.
+  **(i)** Report the `BRAIN_PROFILE=<n>` breakdown, not just steps/s, and state which regime and
+  which contract version a perf claim was measured in — Phase 0 still runs the scatter naive
+  (un-Morton'd) on purpose, and this per-kernel split is the baseline Morton must beat.
+  **(ii)** The split is **regime-dependent**: at 0.043 % of N firing per step the scatter touches
+  only ~8 600 edges, while a seizing net firing 9.5 % of N carries ~220× the edge traffic. Do not
+  quote a split measured in one regime as if it held in the other.
+  **Caution for Phase 2:** a *smaller* scatter launch grid was hypothesised (the N-sized launch
+  starts 200 k threads so ~70 can work) and **tested — not supported**: changing launch width
+  changes atomicAdd ordering, which diverges the chaotic trajectory, so activity rather than
+  launch width dominated the comparison. Any future scatter optimisation must be validated on a
+  **fixed-spike-count micro-benchmark**, not on a live run, for exactly this reason.
 
 ---
 
