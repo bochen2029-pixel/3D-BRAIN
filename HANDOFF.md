@@ -77,10 +77,13 @@ mechanism**, because "the reverberating regime is ABSENT, confirmed four ways." 
    pulse into the inhibitory population still collapses the excitatory rate below a tenth of
    baseline in ~26 % of trials, always recovering. Whether collapse-and-recover is disqualifying
    is **OPEN** — a transient clause would need exactly the threshold B8 avoids.
-3. **ISN paradoxical effect: UNTESTED**, not refuted. The intrinsic fluctuation floor (±0.3 Hz over
-   20 paired trials) is as large as any perturbation small enough to stay in the linear regime.
-   Needs ~10× the trials, or an **E/I-split activity trace** (would require a second counter in
-   `SpikeList` ⇒ contract change).
+3. **ISN paradoxical effect: TESTED AND POSITIVE (2026-07-27).** Injecting extra excitatory current
+   into the inhibitory population makes their rate **fall**: drift-corrected **-0.259 +/- 0.069 Hz,
+   z = -3.7** at a 1 % perturbation (187/199 trials in the linear regime), monotonic to z = -5.3 at
+   3 %, with a clean control (+0.020 +/- 0.044). **The certified network is inhibition-STABILIZED**,
+   not merely inhibition-dominated -- a distinction none of B1-B8 can make. Proposed as clause
+   **B9** in `CONTRACT_CHANGES_PROPOSED.md`; awaiting approval. Enabled by the `RATEDUMP_*`
+   E/I-split trace (`ei_rate.csv`), which needed no contract change.
 4. **Blueprint gaps not built:** cross-homeostasis (Mackwood 2022 — the blueprint calls it "the
    single most important stabilizer upgrade"), fast inhibition τ_I < τ_E, circuit-breaker. **The AI
    state was reached without any of them**, which is itself a result worth reporting.
@@ -96,8 +99,8 @@ mechanism**, because "the reverberating regime is ABSENT, confirmed four ways." 
   import `vcvars64.bat` first (the `.ps1` harnesses do it via `vswhere`).
 - **Instruments:** `analyze.py` (B1–B8 scorecard; `[rundir] [--append]`), `airegime.py` (CV_ISI,
   pairwise r vs its noise floor, per-neuron Fano), `spatial.py` (assemblies, metastability, waves),
-  `paradox.py` (ISN test + `--robust`), `admiss.py`, `bp_validate.py`, `plfit.py`, `sweep_report.py`,
-  `viz3d.py`, `animate.py`. Harnesses: `sweep_{ei,drive,gain,headroom,gaineta,b8,dump,paradox}.ps1`,
+  `isn.py` (ISN paradoxical effect, from `ei_rate.csv`), `paradox.py` (earlier ISN attempts + `--robust`), `admiss.py`, `bp_validate.py`, `plfit.py`, `sweep_report.py`,
+  `viz3d.py`, `animate.py`. Harnesses: `sweep_{ei,drive,gain,headroom,gaineta,b8,dump,paradox,isn}.ps1`,
   `recertify.ps1`.
 - **Every run self-documents:** `[knobs]` line (full config) and `[ctrl]` readout (controller rail
   occupancy) — added because a knob that was never varied stayed invisible for 32 sweep rows.
@@ -124,3 +127,5 @@ cross-build paradox comparison invalidated by chaotic divergence; and two separa
 by inspection.** The instruments in `tools/` now embed those nulls deliberately (noise floors,
 time-shuffled surrogates, void checks, short-trace guards). Keep them. When a result looks clean,
 find the null it should be compared against before reporting it.
+
+

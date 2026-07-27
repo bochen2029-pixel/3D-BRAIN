@@ -1,11 +1,18 @@
-# PROPOSED CONTRACT CHANGES — `brain.h` + `MODULE.md` §6 — **FOR REVIEW, NOT APPLIED**
+# CONTRACT CHANGES — proposals and their disposition
 
-- **Date:** 2026-07-26 · **Author:** Session 4 · **Status:** awaiting operator approval.
-- **Nothing in `brain.h` or `MODULE.md` §6 has been changed.** This file is the diff + rationale.
-- Per `CLAUDE.md`: a contract change means **STOP, show diff + rationale, get approval**.
-- Both arose from the per-kernel profile. Change **A** is a performance change supported by a
-  measurement taken specifically to price it; change **B** is a factual correction to a claim the
-  profile refuted.
+Per `CLAUDE.md`, a contract change (`brain.h` / `MODULE.md`) means **STOP, show diff + rationale,
+get approval**. This file is the record of each one.
+
+| | change | status |
+|---|---|---|
+| **A** | `brain.h` — remove the stored per-neuron RNG state | **APPROVED + APPLIED 2026-07-27** |
+| **B** | `MODULE.md` §6 — binding constraint is regime-dependent | **APPROVED + APPLIED 2026-07-27** |
+| **C** | `MODULE.md` §5 — add **B9**, inhibition-stabilized | **PROPOSED — awaiting approval** |
+
+> **Note on B as applied:** the diff below is what was *proposed*; the text actually applied differs,
+> because **A invalidated B's measurement**. Removing the RNG state cut the gather's cost and flipped
+> which kernel binds (gather 54 %→35–42 %, scatter 40 %→55–62 %). The applied §6 records both rows.
+> The two changes were proposed as independent and were not.
 
 ---
 
@@ -131,15 +138,17 @@ find out.
 
 ---
 
-## C. What I am not asking for
+## A + B — scope notes recorded at proposal time
 
-- Neither change is required for Gate B. **A** is a ~1.2× performance improvement and a VRAM
-  saving; **B** is documentation accuracy. The certified point stands either way.
-- I have **not** implemented Morton (fenced to Phase 2 by `CLAUDE.md`) and am not proposing to.
-- The `RNG_STATELESS` probe in `sim.cu`/`config.h` is **defaulted off** and is timing-only; it
-  should be deleted or promoted depending on the decision on **A**.
-- If only one is approved, **B** is the more important: a wrong claim in the contract propagates,
-  whereas a missed 1.2× does not.
+- Neither change was required for Gate B. **A** was a performance and VRAM change; **B** was
+  documentation accuracy. The certified point stood either way — and was **re-certified** after
+  application, since A changes the RNG stream and therefore made every prior result a different
+  realisation (B1–B8 pass on 3 seeds + both B8 directions; `run/V_*`).
+- Morton was **not** implemented (fenced to Phase 2 by `CLAUDE.md`) and was not proposed.
+- The `RNG_STATELESS` probe was deleted on approval, having been promoted into the contract.
+- Stated at the time: *"if only one is approved, **B** is the more important — a wrong claim in the
+  contract propagates, whereas a missed 1.2× does not."* That held up: B had to be corrected twice
+  before it was right, and the wrong version would have sent Phase 2 at the wrong kernel.
 
 ---
 

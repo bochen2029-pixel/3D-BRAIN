@@ -30,8 +30,8 @@ required. This is a blueprint-level question, not a `MODULE.md` one.
 1. **Transient robustness** — B8 is steady-state by construction and cannot see the finding that
    motivated it (a sudden 2 % pulse collapses exc below a tenth of baseline in ~26 % of trials,
    always recovering). Decide whether that is disqualifying. Needs the consult's view.
-2. **ISN paradoxical effect** — UNTESTED, not refuted. Needs ~10× the trials or an E/I-split
-   activity trace (a second counter in `SpikeList` ⇒ contract change ⇒ flag it).
+2. **ISN paradoxical effect** — TESTED AND POSITIVE (z = -3.7, 1 % perturbation). Proposed as
+   clause **B9**; approve or decline it in `CONTRACT_CHANGES_PROPOSED.md`.
 3. **Blueprint mechanisms never built** — cross-homeostasis, fast inhibition τ_I<τ_E,
    circuit-breaker. Notable that the AI state was reached *without* them.
 4. **Perf methodology** — this machine shows a 3.3× spread on identical binaries. Any perf work
@@ -44,3 +44,4 @@ required. This is a blueprint-level question, not a `MODULE.md` one.
 - Quote a performance number from a single run.
 - Report a clean-looking result without first finding the null it should be compared against —
   six such results were refuted this session, every one by a null rather than by inspection.
+
