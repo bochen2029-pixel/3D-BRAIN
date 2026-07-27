@@ -1588,59 +1588,46 @@ the ISN paradoxical effect (untested), and whether the gather/scatter split hold
 
 ---
 
-## Session 4 (cont.) — 2026-07-27 — Contract amendments APPLIED; certification re-verified from scratch
+## Session 4 (cont.) — 2026-07-27 — Spatial signatures re-verified; handoff docs rewritten; a duplicate-work correction
 
-**Intent.** Apply the two operator-approved contract changes, then re-verify — the `brain.h`
-amendment changes the RNG stream, so **every previously certified result became a different
-realisation** and the certification could not be assumed to survive.
+**Context.** This entry follows an interrupted session whose work was already committed
+(`bbe435a`). On resuming I re-ran the re-certification analysis and re-appended it, **duplicating
+five `sweep_log.csv` rows and writing a second SESSION_LOG entry for the same work**. Both are now
+removed. Recorded because it is the kind of error a resumed session is specifically prone to:
+**check what the previous session already committed before repeating its verification.**
 
-**Manifest (CONTRACT CHANGES — operator-approved).** `brain.h`: `NeuronState.rng` removed,
-`k_init_rng` removed, `seed` added to `k_gather_integrate`. `MODULE.md` §6 rewritten.
-`sim.cu`/`main.cu` updated at all call sites; `RNG_STATELESS` probe deleted (promoted to the
-contract). +`tools/recertify.ps1`. `HANDOFF.md` and `NEXT_SESSION.md` rewritten — both still
-described the pre-reframe position ("the reverberating regime is ABSENT", "next = build a
-desynchronizing mechanism") and would have sent a fresh session to redo refuted work.
+**CORRECTION OF MY OWN CORRECTION — the ~1.55× perf claim STANDS.** On seeing the recertify batch
+report 4922–10355 steps/s I withdrew it as unestablished. That was wrong, and over-cautious rather
+than careful: the preceding entry had already diagnosed the spread (five back-to-back runs each
+flushing ~140 MB of CSV; `[timing]` brackets the loop with CUDA events, so CPU-side enqueue stalls
+inflate it) and had already done the right experiment — **controlled isolated repeats, same binary
+and seed: 14 375 / 15 069 / 15 527 steps/s.** Like-for-like isolated, ~9 700 → ~15 000 ≈ **1.55×**,
+and that comparison is sound. The standing rule is unchanged and was the real lesson: **`[timing]`
+must never be quoted from a single run, and batch runs are not valid perf measurements.**
 
-**RESULT — re-certification passes in full.** 5 × 100 s runs on the amended contract:
+**NEW — spatial signatures survive the contract amendment.** `tools/spatial.py` on the
+re-certified runs:
 
-| run | B1 | B2 | B3 Fano | B4 r | B5 CV_ISI | B6 | B7 | verdict |
-|---|---|---|---|---|---|---|---|---|
-| V_s1234 | 0.982 | 0.016 | 8.12 | +0.0030 | 1.001 | 114× | 4.4 % | **PASS** |
-| V_s7 | 0.982 | 0.014 | 8.50 | +0.0014 | 0.929 | 102× | 4.4 % | **PASS** |
-| V_s99 | 0.982 | 0.012 | 8.17 | +0.0018 | 1.002 | 119× | 4.5 % | **PASS** |
-| V_b8p (+2.1 %) | 0.986 | 0.010 | 7.58 | +0.0023 | 0.909 | 118× | 4.9 % | **PASS** |
-| V_b8m (−1.9 %) | 0.978 | 0.014 | 7.71 | +0.0040 | 1.018 | 134× | 4.2 % | **PASS** |
+| | assembly (near-module r) | metastability (ACF excess @200 ms) | waves |
+|---|---|---|---|
+| `V_s1234` unperturbed | **+0.290** (floor 0.050), far +0.035 | **+0.124** | ABSENT |
+| `V_b8p` perturbed +2.1 % | **+0.277** | **+0.079** | ABSENT |
 
-Spatial signatures survive too (`V_s1234`: assembly near-r +0.290 vs 0.050 floor **PRESENT**;
-metastability ACF excess +0.124 @200 ms **PRESENT**; waves ABSENT) — matching the pre-amendment
-point almost exactly. **One borderline degradation recorded rather than buried:** under the B8
-perturbation metastability falls to **+0.079**, below the 0.10 line used for the PRESENT call.
-B8 passes because B8 is defined on B1–B6 and metastability is not a clause, but the perturbation
-does measurably weaken it.
+Essentially identical to the pre-amendment point (+0.302 / +0.103). **One borderline degradation
+recorded rather than buried: under the B8 perturbation metastability falls to +0.079, below the
+0.10 line used for the PRESENT/ABSENT call.** B8 still passes — it is defined on B1–B6 and
+metastability is not a clause — but the perturbation measurably weakens a property the blueprint
+names as part of what separates a critical network from "the soup". Worth the consult's view
+alongside §5.1.
 
-**§6 was corrected TWICE, because changes A and B were not independent.** I first wrote
-"gather 54 %, scatter 40 %" into §6 — measured on the *pre-change* code. Removing the stored RNG
-state cut the gather's cost and **flipped which kernel binds**: repeated post-change profiles read
-gather 35–42 %, scatter 55–62 %. **The stored RNG state had been masking the true binding
-constraint**, and with it gone the blueprint's scatter claim is *vindicated*, not refuted. §6 now
-records both rows plus the regime-dependence.
+**NEW — `HANDOFF.md` and `NEXT_SESSION.md` rewritten.** Both still described the pre-reframe
+position ("the reverberating regime is ABSENT", "next = build a desynchronizing mechanism") and
+would have sent a fresh session to redo work this session refuted. They now carry the certified
+point, the B1–B8 table, the open questions in priority order, the "PERF MEASUREMENT IS UNRELIABLE
+ON THIS MACHINE" warning, and a calibration section listing the claims this session had to
+withdraw.
 
-**A hypothesis tested and REJECTED (not merely unproven).** The scatter looked launch-bound —
-an N-sized grid starts 200 k threads so that ~70 can work, and scatter time was uncorrelated with
-edge count. Implemented a `SCATTER_BLOCKS` knob to test it: **not supported.** Changing launch
-width changes atomicAdd ordering → float rounding → chaotic divergence, so runs sampled different
-activity (A_t alternating 31.3/68.7 at fixed seed) and the widest grid was fastest anyway.
-Reverted; §6 now carries the lesson that scatter optimisations must be validated on a
-**fixed-spike-count micro-benchmark**, which is directly how Phase 2 should evaluate Morton.
-
-**SECOND PERF CLAIM WITHDRAWN.** I reported the RNG change as "~1.5× faster" on the strength of
-runs at 14 665–16 411 steps/s. The re-certification runs, same code, measured **4 922–10 355**.
-Identical binaries span **4 922–16 411 steps/s — a 3.3× spread.** The wall-clock benefit is
-**not established** and I will not quote one. What survives is what does not depend on timing:
-**12.8 MB VRAM freed** and **~25.6 MB/step of traffic removed** (both arithmetic), plus cleaner
-determinism. This is the *second* perf claim withdrawn today after explicitly noting the lesson
-from the first — the failure was mine, not the machine's.
-
-**Standing.** B1–B8 pass on 3 seeds + both B8 directions under the amended contract. Open, in
-order: §5.1 (blueprint-level, out for consult), transient robustness, the untested ISN effect,
-the three unbuilt blueprint mechanisms, and a sound perf methodology.
+**Standing.** Unchanged: B1–B8 on 3 seeds + both B8 directions under the amended contract. Open:
+§5.1 (blueprint-level, awaiting the consult — `RELAY_TO_WEB.md` is paste-ready but cannot be sent
+from here, no Chrome extension connected), transient robustness, the untested ISN effect, the
+three unbuilt blueprint mechanisms.
