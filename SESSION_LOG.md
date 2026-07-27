@@ -1406,3 +1406,73 @@ present (assemblies, metastability; waves absent). Still open: §5.1 (does the s
 a power-law statement — a **blueprint-level** contradiction, not just a MODULE.md one), transient
 robustness, the untestable-as-yet ISN paradoxical effect, and the NFR-perf miss (0.51× real time).
 
+
+---
+
+## Session 4 (cont.) — 2026-07-26 — PERF: the NFR "miss" is WITHDRAWN; and §6's binding-constraint claim is wrong
+
+**Intent.** Fix the NFR-perf miss. The canonical fix (Morton reordering) is **FENCED to Phase 2**
+by `CLAUDE.md`, so it was refused and the fence cited. Instead did the thing §6 explicitly makes a
+Phase-0 deliverable: *measure* the baseline, which existed only as one aggregate number.
+
+**Manifest.** `main.cu` per-kernel profile, off by default (`BRAIN_PROFILE=<samples>`, sampled
+mid-run so the sync cost is confined to sampled steps). No contract change. No Morton.
+
+### CORRECTION — "NFR-perf MISSED (0.51× real time)" is WITHDRAWN
+
+That finding, logged and committed earlier today, came from a **single non-reproducible
+measurement**. Re-running the **exact same binary** on an idle GPU:
+
+| run | steps/s | RT factor |
+|---|---|---|
+| original `L_wm200_100s` (logged) | **5127** | 0.51× |
+| same binary, re-run today | **9152** | 0.92× |
+| same config, no spike dump | **9957** | 1.00× |
+| same config, 300 k steps, no dump | **10 420** | 1.04× |
+
+The spike dump costs only **6 %** (9957 → 9371), not the 2× I hypothesised. The 5127 figure is
+simply not reproducible — most plausibly concurrent GPU load during that run; it cannot now be
+determined retroactively. **Honest number: ~9 200–10 400 steps/s, i.e. 0.92–1.04× real time,
+against a ≥1.0× requirement. NFR-perf is AT the line, not 2× under it.** Run-to-run spread is ±7 %
+even on an idle machine, so any future perf claim needs repeated measurement on a quiet box —
+which is the actual lesson, and one I violated by reporting a single number as a finding.
+
+### RESULT — §6's NFR-binding-constraint is FALSE at the certified operating point
+
+```
+[profile] 400 sampled steps, mean A_t = 86.4  (0.0432% of N fire per step)
+[profile] gather     89.9 us/step   54.3%   (all 200000 neurons, every step)
+[profile] scatter    66.5 us/step   40.2%   (~8642 edges/step -- THE assumed hot path)
+[profile] gain        9.1 us/step    5.5%
+```
+
+(Absolute values are inflated ~1.7× because event sampling forces a sync and destroys pipelining;
+the **ratios** are the valid product.)
+
+`MODULE.md` §6 states: *"the hot path is the **scattered atomic RMW** into the delay ring — the
+same term FINAL_BLUEPRINT names as the real ceiling."* **It is not, here.** At the certified point
+only **0.043 %** of neurons fire per step, so the scatter touches ~8 600 edges while the **gather
+sweeps all 200 000 neurons every step**. Gather 54 %, scatter 40 %.
+
+**Consequence for the phase plan — this is the important part.** Morton reordering optimises
+scatter memory locality. **If the scatter is 40 % of runtime, Morton's ceiling is 1.67× even if it
+made the scatter entirely free.** The Phase-2 optimisation bet is premised on the scatter being
+the binding constraint, and that premise does not hold for the sparse-firing regime Phase 0 just
+certified. It *would* hold in a dense/bursting regime — the seizing control fires 9.5 % of N per
+step, ~220× more edge traffic — but the certified point is sparse by construction, and sparse is
+what the project wants.
+
+**⇒ Recommended before any Phase-2 Morton work:** re-measure this breakdown at the target scale.
+If the gather stays dominant, the higher-leverage optimisations are gather-side and NOT fenced —
+e.g. the per-neuron `curandStatePhilox4_32_10_t` is ~48–64 B of state read AND written every step
+for all N (~20–26 MB/step, plausibly the single largest memory term), and Philox is counter-based
+so it can be regenerated from (seed, id, step) with no stored state at all. **That would touch
+`brain.h` (`NeuronState.rng`) ⇒ contract change ⇒ flagged, not done.**
+
+### Standing
+
+NFR-perf: met to within measurement noise. NFR-mem: ~220 MB, well inside the ≤300 MB budget.
+NFR-determinism: holds. **NFR-binding-constraint: refuted at this operating point** — §6's text
+should be amended to say the binding constraint is *regime-dependent* (gather-bound when sparse,
+scatter-bound when dense), but that is a contract edit and is flagged, not made.
+
