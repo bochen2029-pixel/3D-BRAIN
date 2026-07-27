@@ -178,6 +178,17 @@
 #define PARADOX_TRIALS   20         // number of injection trials                       [KNOB]
 #endif
 
+// ---- RNG state: timing probe for the proposed brain.h change ----------------
+// 0 (default) = the contract's behaviour: per-neuron curandStatePhilox4_32_10_t read AND written
+// every step for all N. 1 = regenerate the Philox state per call from (seed, i, step), which is
+// what Philox's counter-based design is for. Measured 2026-07-26: gather 68.5 -> 47.7 us/step
+// (-30%). The real change needs `seed` as a kernel argument => brain.h signature change, so the
+// probe uses a literal seed and is TIMING-ONLY -- its dynamics are not comparable to a normal
+// build. See CONTRACT_CHANGES_PROPOSED.md.
+#ifndef RNG_STATELESS
+#define RNG_STATELESS    0
+#endif
+
 // ---- Probe / criticality ----------------------------------------------------
 #define PROBE_WINDOW     4000       // steps used for the live m-hat regression print
 #define PRINT_EVERY      4000       // progress cadence

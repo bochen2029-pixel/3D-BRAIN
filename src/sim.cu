@@ -40,10 +40,22 @@ __global__ void k_gather_integrate(
     s.g_syn[i] = g;
 
     // external Poisson noise floor
-    curandStatePhilox4_32_10_t st = s.rng[i];
     float mean = nu_ext_hz * dt_ms * 0.001f;  // expected ext spikes this step
+#if RNG_STATELESS
+    // TIMING PROBE ONLY -- prices the stored RNG state for the brain.h proposal.
+    // Philox is counter-based, so the state can be regenerated from (seed, i, step) instead of
+    // being read AND written every step for all N (~64 B x 2 x N of traffic). The real change
+    // needs `seed` as a kernel argument, which is a brain.h signature change; this probe uses a
+    // literal so it can be measured WITHOUT touching the contract. Dynamics under this flag are
+    // NOT comparable to a normal build -- it exists to time the gather, nothing else.
+    curandStatePhilox4_32_10_t st;
+    curand_init(1234u, (unsigned long long)i, (unsigned long long)step, &st);
+    unsigned n_ext = curand_poisson(&st, mean);
+#else
+    curandStatePhilox4_32_10_t st = s.rng[i];
     unsigned n_ext = curand_poisson(&st, mean);
     s.rng[i] = st;
+#endif
 
     // total input: gain scales the (summed) recurrent drive; noise is an ungained floor
     float I = s.gain[i] * g + w_ext * (float)n_ext;

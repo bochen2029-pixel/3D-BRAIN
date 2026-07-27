@@ -1476,3 +1476,45 @@ NFR-determinism: holds. **NFR-binding-constraint: refuted at this operating poin
 should be amended to say the binding constraint is *regime-dependent* (gather-bound when sparse,
 scatter-bound when dense), but that is a contract edit and is flagged, not made.
 
+
+---
+
+## Session 4 (cont.) — 2026-07-26 — Two contract changes FLAGGED (not applied); RNG state priced
+
+**Intent.** Formally flag the two contract changes the profile surfaced, per CLAUDE.md's
+"contract change => STOP, show diff + rationale, get approval". Priced change A first so the
+proposal carries a measurement rather than the estimate I had been quoting.
+
+**Manifest.** +`CONTRACT_CHANGES_PROPOSED.md` (both diffs + rationale + risks). `sim.cu`/`config.h`
+gain `RNG_STATELESS`, **defaulted OFF**, a timing-only probe that measures the proposed change
+without touching the contract (it uses a literal seed, since passing the real one is itself the
+signature change under review). **No contract file edited.**
+
+**A — `brain.h`: remove the stored per-neuron RNG state.** `curandStatePhilox4_32_10_t` is ~64 B
+read AND written every step for every neuron (~25.6 MB/step at N=200k). Philox is counter-based;
+the state can be regenerated from `(seed, i, step)`. Requires `NeuronState.rng` removed,
+`k_init_rng` removed, and `seed` added to `k_gather_integrate` — all `brain.h`.
+
+| | gather µs/step | wall steps/s |
+|---|---|---|
+| stored (contract) | **68.5** | 9 514 |
+| stateless (proposed) | **47.7** | 15 210 |
+
+**The honest figure is the gather, −30 %** — activity-independent, therefore a clean comparison.
+**The wall-clock 9 514 → 15 210 is NOT a 1.6× speedup and I am explicitly not quoting it as one:**
+the probe uses a different RNG stream, so the runs sat at different activity levels (scatter 6 460
+vs 3 112 edges/step) and the lighter scatter flatters the stateless run. Holding scatter fixed,
+122.3 → 101.5 µs/step ≈ **1.20× overall**. Plus 12.8 MB VRAM freed (≈256 MB at the blueprint's 4 M
+target, where synapse storage is the binding term). Determinism is preserved and arguably
+strengthened — `(seed,i,step)` addressing removes the stored version's dependence on how many
+draws were previously consumed.
+
+**B — `MODULE.md` §6: the binding constraint is regime-dependent.** §6 asserts the scattered
+atomic RMW is the hot path and tells Phase 0 to measure it as the baseline Morton must beat.
+Phase 0 measured it, and at the certified sparse point the assertion is **false** (gather 54 %,
+scatter 40 %). This is a correction of fact, and the one that matters more of the two: a wrong
+claim in the contract propagates — it would send Phase 2 at the wrong kernel with the contract's
+authority behind it — whereas a missed 1.2× does not.
+
+**Neither change is required for Gate B.** The certified point stands either way. Morton remains
+un-built and fenced.
