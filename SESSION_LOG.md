@@ -1687,3 +1687,46 @@ cross-homeostasis, fast inhibition or a circuit-breaker, the picture is that inh
 
 **NEXT.** Proposing this as **B9** in `CONTRACT_CHANGES_PROPOSED.md`: Gate B currently omits a
 blueprint acceptance clause that is now measurable and passing. Flagged, not applied.
+
+---
+
+## Session 4 (cont.) — 2026-07-27 — B9 ADOPTED. Gate B is now B1–B9 and the certified point passes all nine.
+
+**Intent.** Apply the operator-approved B9 (inhibition-stabilized / paradoxical-effect-positive)
+and propagate it through the contract, the instrument and every orientation document.
+
+**Manifest (CONTRACT CHANGE — operator-approved).** `MODULE.md` §5 **+B9**, and the header count
+corrected (it still said "all seven" after B8 was added — a stale count that had survived one
+amendment). `tools/analyze.py`: docstring, banner and the closing note now state plainly that it
+measures **B1–B7 only**, and that **B8 and B9 are CROSS-RUN — a B1–B7 pass is not a Gate B pass**.
+`CLAUDE.md`, `README.md`, `HANDOFF.md`, `NEXT_SESSION.md` updated to B1–B9;
+`CONTRACT_CHANGES_PROPOSED.md` ledger marks A, B and C all approved and applied.
+
+**B9 as adopted.** Injecting extra *excitatory* current into the *inhibitory* population must make
+the inhibitory rate **fall**: drift-corrected delta negative at **|z| ≥ 2**, **monotonic** in
+amplitude, at an amplitude where **< 10 % of trials lose the excitatory population**, with a
+control whose own paired delta is consistent with zero.
+
+**The void-rate ceiling and the control check are part of the clause on purpose.** Without them the
+amplitude can be chosen to produce whichever sign is wanted — and both earlier attempts at this
+measurement failed in exactly that way (saturating perturbations that silenced E; a cross-build
+comparison invalidated by chaotic divergence). A clause that can be satisfied by picking an
+amplitude is not a test.
+
+**Certified point: PASS.** −0.259 ± 0.069 Hz, **z = −3.7** at a 1 % perturbation (187/199 trials in
+regime), monotonic to z = −5.3 at 3 %, control +0.020 ± 0.044.
+
+**Why this clause earns its place.** B1–B8 are all statistics of an unperturbed or steadily
+perturbed run, and **none of them can distinguish an inhibition-STABILIZED network from a merely
+inhibition-DOMINATED one.** B9 is the only clause in the battery that can falsify the *mechanism*
+story rather than corroborate the *phenomenology*. The project had asserted the ISN regime
+implicitly since the E/I reframe; it is now measured.
+
+**A stale count found while editing.** §5's header still read "A run PASSES iff all seven hold"
+after B8 had been added — the kind of drift that makes a contract quietly wrong. Now "all nine",
+and `analyze.py` no longer implies its own scorecard is the whole battery.
+
+**Standing.** Gate B = **B1–B9**, all passing on the certified point (B1–B7 on 3 seeds, B8 in both
+directions, B9 at z = −3.7). Open, unchanged: **§5.1** (blueprint-level power-law question, out for
+consult and the only thing between here and an unqualified pass), transient robustness, and the
+three unbuilt blueprint mechanisms.

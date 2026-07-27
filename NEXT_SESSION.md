@@ -5,7 +5,7 @@
 > **Trust the files over any recalled summary. Verify before acting.**
 
 ## ONE LINE
-**Gate B (B1–B8) PASSES** on `run/V_s1234` + 2 more seeds + both B8 directions. The Session-3
+**Gate B (B1–B9) PASSES** on `run/V_s1234` + 2 more seeds + both B8 directions. The Session-3
 mandate to build a desynchronizing mechanism is **WITHDRAWN** — the "void" was two saturated
 homeostats, not missing physics. **Do not build a desynchronizer.**
 
@@ -44,4 +44,5 @@ required. This is a blueprint-level question, not a `MODULE.md` one.
 - Quote a performance number from a single run.
 - Report a clean-looking result without first finding the null it should be compared against —
   six such results were refuted this session, every one by a null rather than by inspection.
+
 

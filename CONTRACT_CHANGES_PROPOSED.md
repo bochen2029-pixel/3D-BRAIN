@@ -7,7 +7,7 @@ get approval**. This file is the record of each one.
 |---|---|---|
 | **A** | `brain.h` — remove the stored per-neuron RNG state | **APPROVED + APPLIED 2026-07-27** |
 | **B** | `MODULE.md` §6 — binding constraint is regime-dependent | **APPROVED + APPLIED 2026-07-27** |
-| **C** | `MODULE.md` §5 — add **B9**, inhibition-stabilized | **PROPOSED — awaiting approval** |
+| **C** | `MODULE.md` §5 — add **B9**, inhibition-stabilized | **APPROVED + APPLIED 2026-07-27** |
 
 > **Note on B as applied:** the diff below is what was *proposed*; the text actually applied differs,
 > because **A invalidated B's measurement**. Removing the RNG state cut the gather's cost and flipped
@@ -154,7 +154,7 @@ find out.
 
 # C. `MODULE.md` §5 — add **B9: inhibition-stabilized (paradoxical-effect-positive)**
 
-- **Date:** 2026-07-27 · **Status:** awaiting operator approval. **Not applied.**
+- **Date:** 2026-07-27 · **Status:** APPROVED and applied to `MODULE.md` §5 on 2026-07-27.
 - Changes A and B in this file were approved and applied on 2026-07-27; this is a new proposal.
 
 ## C.1 The diff
@@ -203,3 +203,4 @@ Run `pwsh tools/sweep_isn.ps1` then `python tools/isn.py`. Needs `RATEDUMP_*` (n
 The result stands as a recorded measurement in `SESSION_LOG.md` either way; declining B9 only means
 Gate B continues not to cover it. My recommendation is to adopt it — it is the only clause in the
 battery capable of falsifying the mechanism story rather than confirming the phenomenology.
+

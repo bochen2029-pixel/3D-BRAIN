@@ -5,7 +5,7 @@
 > **VERIFY BEFORE ACTING — disk wins over this doc.**
 
 ## STATE IN ONE LINE
-**Gate B (B1–B8) PASSES** on the certified operating point across **≥3 seeds** and **both B8
+**Gate B (B1–B9) PASSES** on the certified operating point across **≥3 seeds** and **both B8
 perturbation directions**, with `brain.h` amended once (RNG state removed) and `MODULE.md` §5
 rewritten to the sustained-frame battery. **The physics is done. What remains is one open
 question of principle, out for external review.**
@@ -31,6 +31,7 @@ Build/run: `pwsh tools/recertify.ps1`, then `python tools/analyze.py run/V_s1234
 | B6 self-sustaining on recurrence | ≥10× drive cut, recurrent ≫ ext | **102–119× recurrent** |
 | B7 two controllers off rails | gain railed < 20 %, stationary, on target | **gain 0.41, 4.4 % railed** |
 | B8 robust to ±2 % perturbation | B1–B6 still hold | **PASS both directions** |
+| B9 inhibition-stabilized | paradoxical effect, \|z\| ≥ 2, monotonic | **−0.259 ± 0.069 Hz, z = −3.7** |
 
 Not clauses, but measured (`tools/spatial.py`): **assembly structure PRESENT** (near-module
 r ≈ +0.29 vs a 0.050 floor, far +0.035), **metastability PRESENT** (ACF excess +0.12 @200 ms),
@@ -50,7 +51,7 @@ mechanism**, because "the reverberating regime is ABSENT, confirmed four ways." 
   Gate-B search nominally covered, only four had ever been varied. Raising controller authority
   (`ISTDP_ETA`, `W_MAX`, `GAIN_MIN`) reaches the asynchronous-irregular regime with **no
   desynchronizing mechanism at all**. The mandate is withdrawn.
-- **`MODULE.md` §5 replaced** with B1–B8 + run-length (≥100 s) + ≥3-seed clauses; §5.1 records the
+- **`MODULE.md` §5 replaced** with B1–B9 + run-length (≥100 s) + ≥3-seed clauses; §5.1 records the
   retired avalanche/crackling clauses **and what retiring them costs**.
 - **`brain.h` amended (2026-07-27):** `NeuronState.rng` and `k_init_rng` removed, `seed` added to
   `k_gather_integrate`. Philox is counter-based, so the drive stream is regenerated from
@@ -81,8 +82,7 @@ mechanism**, because "the reverberating regime is ABSENT, confirmed four ways." 
    into the inhibitory population makes their rate **fall**: drift-corrected **-0.259 +/- 0.069 Hz,
    z = -3.7** at a 1 % perturbation (187/199 trials in the linear regime), monotonic to z = -5.3 at
    3 %, with a clean control (+0.020 +/- 0.044). **The certified network is inhibition-STABILIZED**,
-   not merely inhibition-dominated -- a distinction none of B1-B8 can make. Proposed as clause
-   **B9** in `CONTRACT_CHANGES_PROPOSED.md`; awaiting approval. Enabled by the `RATEDUMP_*`
+   not merely inhibition-dominated -- a distinction none of B1-B8 can make. ADOPTED as clause **B9** (MODULE.md §5, 2026-07-27). Enabled by the `RATEDUMP_*`
    E/I-split trace (`ei_rate.csv`), which needed no contract change.
 4. **Blueprint gaps not built:** cross-homeostasis (Mackwood 2022 — the blueprint calls it "the
    single most important stabilizer upgrade"), fast inhibition τ_I < τ_E, circuit-breaker. **The AI
@@ -97,11 +97,11 @@ mechanism**, because "the reverberating regime is ABSENT, confirmed four ways." 
 - **Toolchain:** RTX 4070 Ti SUPER (sm_89), CUDA 13.1, CMake 4.3.3, VS2022, Win11 + PowerShell.
   Canonical build `cmake --build build --config Release`. Per-point sweeps use raw `nvcc` and MUST
   import `vcvars64.bat` first (the `.ps1` harnesses do it via `vswhere`).
-- **Instruments:** `analyze.py` (B1–B8 scorecard; `[rundir] [--append]`), `airegime.py` (CV_ISI,
+- **Instruments:** `analyze.py` (B1–B7 scorecard, B8/B9 are cross-run; `[rundir] [--append]`), `airegime.py` (CV_ISI,
   pairwise r vs its noise floor, per-neuron Fano), `spatial.py` (assemblies, metastability, waves),
   `isn.py` (ISN paradoxical effect, from `ei_rate.csv`), `paradox.py` (earlier ISN attempts + `--robust`), `admiss.py`, `bp_validate.py`, `plfit.py`, `sweep_report.py`,
   `viz3d.py`, `animate.py`. Harnesses: `sweep_{ei,drive,gain,headroom,gaineta,b8,dump,paradox,isn}.ps1`,
-  `recertify.ps1`.
+  ecertify.ps1, sweep_isn.ps1.
 - **Every run self-documents:** `[knobs]` line (full config) and `[ctrl]` readout (controller rail
   occupancy) — added because a knob that was never varied stayed invisible for 32 sweep rows.
   `BRAIN_PROFILE=<n>` gives a per-kernel breakdown.
@@ -127,5 +127,8 @@ cross-build paradox comparison invalidated by chaotic divergence; and two separa
 by inspection.** The instruments in `tools/` now embed those nulls deliberately (noise floors,
 time-shuffled surrogates, void checks, short-trace guards). Keep them. When a result looks clean,
 find the null it should be compared against before reporting it.
+
+
+
 
 

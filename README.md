@@ -34,11 +34,11 @@ python tools/analyze.py            # run in the folder with the *.csv it just wr
 ```
 You get `criticality.png` (settled activity, the B2 m̂ plateau, the B1 autocorrelation
 fit, the B7 controller trace), `pointcloud.png` (3D firing), and a printed
-**B1–B8 scorecard**. `python tools/analyze.py <rundir> --append` also writes the
+**B1–B7 scorecard** (B8/B9 are cross-run — see §5). `python tools/analyze.py <rundir> --append` also writes the
 row to `sweep_log.csv`.
 
 ## The Gate B battery (MODULE.md §5 is authoritative)
-PASS iff **all eight** hold, on **≥3 seeds**, on runs of **≥100 s** (`N_STEPS ≥ 1e6`):
+PASS iff **all nine** hold, on **≥3 seeds**, on runs of **≥100 s** (`N_STEPS ≥ 1e6`):
 
 | | clause |
 |---|---|
@@ -50,6 +50,7 @@ PASS iff **all eight** hold, on **≥3 seeds**, on runs of **≥100 s** (`N_STEP
 | B6 | self-sustaining **on recurrence** — survives a ≥10× drive cut |
 | B7 | both homeostats **off their rails** and stationary |
 | B8 | B1–B6 still hold under a sustained ±2 % perturbation |
+| B9 | inhibition-stabilized — the paradoxical effect (blueprint §7.4) |
 
 Avalanche τ ≈ 1.5, KS and the crackling relation were **retired** (§5.1): an avalanche
 presupposes silence between cascades, and this regime is never silent, so τ is an
@@ -64,7 +65,7 @@ whether the sustained frame still owes *some* power-law statement.
   saturated homeostats — a clamped lever looks exactly like a dead one.
 
 ## Honest status
-**Gate B (B1–B8) passes** on the certified point across 3 seeds and both B8
+**Gate B (B1–B9) passes** on the certified point across 3 seeds and both B8
 perturbation directions — see `HANDOFF.md` for the point and the numbers, and
 `SESSION_LOG.md` for how it was reached (including the several claims that had to
 be withdrawn along the way). Runs at ≈1.5× real time at N=200 000.
@@ -82,3 +83,5 @@ src/main.cu          init, sim loop, CSV dumps
 tools/analyze.py     rigorous MR estimator + MLE power-law + plots
 MODULE.md            the spec / contract / acceptance battery
 ```
+
+

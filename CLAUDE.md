@@ -39,13 +39,15 @@ iSTDP = fast, per-neuron input-gain = slow) + an ungained Poisson floor. Deliver
 
 ## Definition of done = Gate B (MODULE.md §5), verified by `tools/analyze.py` — NEVER by vibes
 **AMENDED 2026-07-25/27 — the battery below replaced the old one. `MODULE.md` §5 is authoritative;
-this is the summary.** PASS iff **all eight** hold, on **≥3 seeds**, on runs of **≥100 s**
+this is the summary.** PASS iff **all nine** hold, on **≥3 seeds**, on runs of **≥100 s**
 (`N_STEPS ≥ 1e6` — the slow controller cannot converge in 20 s):
 **B1** near-critical m̂≈0.98 · **B2** m̂ FLAT across bins 3–10 (spread <0.03) · **B3** Fano 2–20,
 0 % silent (m̂ alone cannot separate reverberating from seizing — Fano can) · **B4** pairwise
 r<0.05 vs its finite-sample noise floor · **B5** CV_ISI median 0.8–1.2 · **B6** self-sustaining
 **on recurrence** (survives a ≥10× drive cut) · **B7** both controllers **off their rails** and
-stationary · **B8** all of B1–B6 still hold under a sustained ±2 % perturbation.
+stationary · **B8** all of B1–B6 still hold under a sustained ±2 % perturbation · **B9** inhibition-STABILIZED —
+injecting excitatory current into the inhibitory population makes its rate FALL (the one clause that
+can falsify the mechanism claim rather than corroborate the phenomenology).
 
 **RETIRED (see MODULE.md §5.1):** avalanche τ≈1.5 + KS, and the crackling relation. An avalanche
 presupposes silence between cascades; the reverberating regime is never silent, so τ is an artifact
@@ -76,7 +78,7 @@ cite this fence, flag it as a scope violation**, then continue Phase-0 work:
 
 ## Sweep discipline (Gate B is a search, not a single run)
 Never tune blind. Override knobs → run → `python tools/analyze.py <rundir> --append` (writes the
-B1–B8 row to `sweep_log.csv` itself; do not hand-maintain it). Failure modes:
+B1–B7 row to `sweep_log.csv` itself; do not hand-maintain it). Failure modes:
 **silent** (`m̂→0`) → raise `W_EXC_INIT` / `NU_EXT_HZ`, or lower `W_INH_INIT`;
 **seizing** (Fano ≫ 100) → raise `ISTDP_ETA` / `W_MAX`, or lower `W_EXC_INIT`.
 Knobs: `W_EXC_INIT, W_INH_INIT, W_MAX, NU_EXT_HZ, W_EXT, RHO0_HZ, ISTDP_ETA, GAIN_ETA, GAIN_MIN,
@@ -123,3 +125,5 @@ nothing.
 Fixed-path helpers (see `C:\Users\user\.claude\CLAUDE.md`): `C:\everything` (locate files),
 `C:\chunker` (read/size huge files), `C:\imguard` (view images safely — use before opening
 `criticality.png` / `pointcloud.png`), `C:\earshot` (audio/video → text).
+
+

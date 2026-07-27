@@ -2,7 +2,11 @@
 """
 analyze.py -- the Gate B acceptance instrument (MODULE.md Sec.5, amended 2026-07-25).
 
-Emits the B1-B7 scorecard. A run PASSES iff all seven hold:
+Emits the B1-B7 scorecard -- the part of Gate B measurable from ONE run. Gate B has nine clauses;
+B8 (robustness) and B9 (inhibition-stabilized) are CROSS-RUN and are named but not verified here:
+  B8 -> re-run with a sustained +/-2% perturbation (tools/sweep_b8.ps1) and require B1-B6 again
+  B9 -> tools/sweep_isn.ps1 + tools/isn.py (needs the RATEDUMP_* E/I-split trace)
+A run passes B1-B7 iff all seven hold:
 
   B1 near-critical     m_hat ~ 0.98 (MR estimator, generation scale)   0.9 < m < 1.02
   B2 scale-invariant   m_hat FLAT across bins 3-10                     spread < 0.03
@@ -339,7 +343,7 @@ clauses = [("B1 near-critical",   B1, f"m_hat(bin{GEN_BIN}) = {m_gen:.4f}       
                                        f"rate {fin.get('rE',float('nan')):.1f} vs {RHO0_HZ:.1f} Hz  stationary={stat}"
                                        if ctrl else "no [ctrl] readout in sim.log"))]
 
-print("=========== GATE B  ·  B1-B8  (MODULE.md §5, amended 2026-07-26) ===========")
+print("===== GATE B · B1-B7 from this run (B8/B9 are cross-run; MODULE.md §5, 2026-07-27) =====")
 print(f"  run: {n_steps} steps ({n_steps*0.1e-3:.1f} s)   mean A = {a_all:.2f}  (bulk {a_body:.2f}, last-20% {a_tail:.2f})")
 # B8 is a CROSS-RUN clause: it asks whether B1-B6 still hold under a sustained perturbation, so a
 # single run can only report which side of the comparison it is. Say so explicitly rather than
@@ -377,8 +381,10 @@ elif all(_vals):
     print("      §5 also requires >=3 independent seeds. One run is a realisation, not a regime.")
 else:
     print(f"  >>> VERDICT: FAIL -- {', '.join(n for n, v, _ in clauses if v is False)}")
-print("  B6's drive-KNOCKDOWN half is a CROSS-RUN test (tools/sweep_drive.ps1): re-run with")
-print("  NU_EXT cut >=10x and confirm the point stays in-band. Not checkable from one run.")
+print("  CROSS-RUN clauses NOT checkable here -- a B1-B7 pass above is not a Gate B pass:")
+print("    B6 drive-knockdown half : tools/sweep_drive.ps1  -- cut NU_EXT >=10x, stay in-band")
+print("    B8 robustness           : tools/sweep_b8.ps1     -- sustained +/-2%, require B1-B6")
+print("    B9 inhibition-stabilized: tools/sweep_isn.ps1 + tools/isn.py  -- paradoxical effect")
 print("===========================================================================")
 
 # ---- RETIRED clauses, kept as diagnostics (MODULE.md §5.1) -----------------

@@ -79,7 +79,7 @@ Host probe: `mhat_regression`, `detect_avalanches`.
 
 ## 5. Test Contract — the Acceptance Sub-Battery (Gate B)
 
-"Watchable" is not the bar; **provably alive** is. A run PASSES iff all seven hold,
+"Watchable" is not the bar; **provably alive** is. A run PASSES iff all **nine** hold,
 auto-verified offline (`tools/analyze.py` + `tools/admiss.py` + `tools/airegime.py`) —
 never eyeballed.
 
@@ -141,6 +141,24 @@ The two are opposite sides of a phase transition and cannot both be required. Se
       should itself be disqualifying is **OPEN** — "never dies" plausibly means never *permanently*
       dies, and the network always recovered. A transient clause would need the depth threshold
       this one was written to avoid, so it is not adopted by default.
+- [ ] **B9 — Inhibition-stabilized (paradoxical-effect-positive).** Injecting extra *excitatory*
+      current into the *inhibitory* population must make the **inhibitory rate FALL**, measured as
+      a paired, trial-averaged response against a zero-injection control. Require the
+      drift-corrected inhibitory delta to be negative at **|z| ≥ 2**, with **monotonic** amplitude
+      dependence, at an amplitude small enough that **< 10 % of trials lose the excitatory
+      population**, and with a control whose own paired delta is consistent with zero.
+      *This is FINAL_BLUEPRINT §7.4's "paradoxical-effect-positive". It is the only clause in the
+      battery that can **falsify the mechanism claim** rather than corroborate the phenomenology:
+      B1–B8 are all statistics of an unperturbed or steadily-perturbed run, and none of them can
+      distinguish an inhibition-**stabilized** network from a merely inhibition-**dominated** one.
+      The void-rate ceiling and the control check are part of the clause on purpose — without them
+      the amplitude can be chosen to produce whichever sign is wanted, and two earlier attempts at
+      this measurement failed exactly that way (saturating perturbations, and a cross-build
+      comparison invalidated by chaotic divergence). Measure with `tools/sweep_isn.ps1` +
+      `tools/isn.py`, which need the `RATEDUMP_*` E/I-split trace.*
+      **Measured 2026-07-27 at the certified point: −0.259 ± 0.069 Hz, z = −3.7 at a 1 %
+      perturbation (187/199 trials in regime), monotonic to z = −5.3 at 3 %, control
+      +0.020 ± 0.044. PASS.** (Adopted 2026-07-27.)
 
 **Run length.** B6 and B7 cannot be assessed in 20 s. At a 0.7 Hz rate error the slow
 controller moves `gain` by only ~0.007/s — ~0.14 over an entire default run — so a 20 s
