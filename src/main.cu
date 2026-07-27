@@ -246,10 +246,26 @@ int main(int argc, char** argv) {
     cudaEvent_t t0, t1; cudaEventCreate(&t0); cudaEventCreate(&t1);
     cudaEventRecord(t0);
 
+    // ---- optional per-kernel profile (BRAIN_PROFILE=<samples>) -----------------
+    // MODULE.md §6 NFR-binding-constraint asserts the hot path is the scattered atomic RMW into
+    // the delay ring, and Phase 0 runs it un-Morton'd on purpose to set the baseline Morton must
+    // beat. A single aggregate steps/s cannot test that assertion -- at the certified operating
+    // point only ~67 of 200 000 neurons fire per step, so the scatter touches ~6 700 edges while
+    // the gather sweeps all N. Sampled with events over mid-run steps; the sync cost is confined
+    // to the sampled steps and the profile is off by default (zero overhead).
+    const char* profenv = getenv("BRAIN_PROFILE");
+    const int   prof_n  = profenv ? atoi(profenv) : 0;
+    cudaEvent_t pe[4];
+    if (prof_n) for (int q = 0; q < 4; ++q) cudaEventCreate(&pe[q]);
+    double t_gath = 0, t_scat = 0, t_gain = 0; long prof_hits = 0, prof_spk = 0;
+
     for (int step = 0; step < N_STEPS; ++step) {
+        const bool prof = prof_n && step >= N_STEPS / 2 && prof_hits < prof_n;
+        if (prof) CUDA_CHECK(cudaEventRecord(pe[0]));
         CUDA_CHECK(cudaMemsetAsync(spikes.count, 0, sizeof(int)));
         k_gather_integrate<<<gridN, block>>>(s, ring, spikes, N, step, dt,
                                              NU_EXT_HZ, W_EXT, trace_decay, rate_decay);
+        if (prof) CUDA_CHECK(cudaEventRecord(pe[1]));
         // record A_t (== spikes.count after gather) without a host sync
         CUDA_CHECK(cudaMemcpyAsync(activity_dev + step, spikes.count, sizeof(int),
                                    cudaMemcpyDeviceToDevice));
@@ -264,9 +280,20 @@ int main(int argc, char** argv) {
         }
         k_scatter<<<gridN, block>>>(s, c, ring, spikes, N, step,
                                     ISTDP_ETA, istdp_alpha, W_MAX);
+        if (prof) CUDA_CHECK(cudaEventRecord(pe[2]));
         if (step % GAIN_EVERY == 0)
             k_homeostatic_gain<<<gridN, block>>>(s, N, dt, RHO0_HZ,
                                                  GAIN_ETA, GAIN_MIN, GAIN_MAX);
+        if (prof) {
+            CUDA_CHECK(cudaEventRecord(pe[3]));
+            CUDA_CHECK(cudaEventSynchronize(pe[3]));
+            float ga = 0, sc = 0, gn = 0;
+            cudaEventElapsedTime(&ga, pe[0], pe[1]);
+            cudaEventElapsedTime(&sc, pe[1], pe[2]);
+            cudaEventElapsedTime(&gn, pe[2], pe[3]);
+            int cnt = 0; CUDA_CHECK(cudaMemcpy(&cnt, spikes.count, sizeof(int), cudaMemcpyDeviceToHost));
+            t_gath += ga; t_scat += sc; t_gain += gn; prof_spk += cnt; ++prof_hits;
+        }
 
         if (step > 0 && step % CTRL_PROBE_EVERY == 0)
             probe_controllers("mid", step, c, s, N, row_ptr, is_inh, dt);
@@ -289,6 +316,20 @@ int main(int argc, char** argv) {
     double sps = N_STEPS / (ms / 1000.0);
     printf("[timing] %.2f s wall | %.0f steps/s | real-time factor %.2fx (>=1 is real time)\n",
            ms / 1000.0, sps, sps / 10000.0);
+    if (prof_hits) {
+        const double tot = t_gath + t_scat + t_gain;
+        printf("[profile] %ld sampled steps, mean A_t = %.1f  (%.4f%% of N fire per step)\n",
+               prof_hits, (double)prof_spk / prof_hits, 100.0 * prof_spk / prof_hits / N);
+        printf("[profile] gather  %7.1f us/step  %5.1f%%   (all %d neurons, every step)\n",
+               1000.0 * t_gath / prof_hits, 100.0 * t_gath / tot, N);
+        printf("[profile] scatter %7.1f us/step  %5.1f%%   (~%.0f edges/step -- THE assumed hot path)\n",
+               1000.0 * t_scat / prof_hits, 100.0 * t_scat / tot,
+               (double)prof_spk / prof_hits * (double)M / N);
+        printf("[profile] gain    %7.1f us/step  %5.1f%%   (1 in %d steps)\n",
+               1000.0 * t_gain / prof_hits, 100.0 * t_gain / tot, (int)GAIN_EVERY);
+        printf("[profile] total   %7.1f us/step -> %.0f steps/s\n",
+               1000.0 * tot / prof_hits, 1e6 / (1000.0 * tot / prof_hits));
+    }
 
     probe_controllers("final", N_STEPS, c, s, N, row_ptr, is_inh, dt);
 
