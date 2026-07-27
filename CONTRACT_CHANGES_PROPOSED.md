@@ -140,3 +140,57 @@ find out.
   should be deleted or promoted depending on the decision on **A**.
 - If only one is approved, **B** is the more important: a wrong claim in the contract propagates,
   whereas a missed 1.2× does not.
+
+---
+
+# C. `MODULE.md` §5 — add **B9: inhibition-stabilized (paradoxical-effect-positive)**
+
+- **Date:** 2026-07-27 · **Status:** awaiting operator approval. **Not applied.**
+- Changes A and B in this file were approved and applied on 2026-07-27; this is a new proposal.
+
+## C.1 The diff
+
+```diff
+ - [ ] **B8 — Robust to perturbation.** ...
++- [ ] **B9 — Inhibition-stabilized (paradoxical-effect-positive).** Injecting extra *excitatory*
++      current into the *inhibitory* population must make the inhibitory rate **fall**, measured as
++      a paired, trial-averaged response against a zero-injection control, at an amplitude small
++      enough that <10 % of trials lose the excitatory population. Require the drift-corrected
++      inhibitory delta to be negative at **|z| ≥ 2**, with **monotonic** amplitude dependence and a
++      control whose own paired delta is consistent with zero.
++      *This is FINAL_BLUEPRINT §7.4's "paradoxical-effect-positive" — the one clause in the
++      blueprint's battery that can FALSIFY the mechanism claim rather than corroborate the
++      dynamics. B1–B8 are all statistics of an unperturbed or steadily-perturbed run and none of
++      them can distinguish an inhibition-STABILIZED network from a merely inhibition-DOMINATED one.*
+```
+
+## C.2 Why, and the measurement
+
+Gate B currently omits a blueprint acceptance clause. The project has claimed an ISN regime
+implicitly since the E/I reframe; until 2026-07-27 that claim had never been tested. It now has:
+
+| injection | usable trials | Δ exc (Hz) | Δ inh, drift-corrected (Hz) | z |
+|---|---|---|---|---|
+| 0 (control) | 195/199 | +0.029 ± 0.049 | +0.020 ± 0.044 | — |
+| **0.05 (≈1 % of the excitatory drive onto I)** | **187/199** | −0.481 ± 0.062 | **−0.259 ± 0.069** | **−3.7** |
+| 0.15 (≈3 %) | 85/199 | −1.194 ± 0.089 | −0.464 ± 0.087 | −5.3 |
+
+Run `pwsh tools/sweep_isn.ps1` then `python tools/isn.py`. Needs `RATEDUMP_*` (no contract change).
+
+## C.3 Risks and honest limits
+
+- **Amplitude sensitivity is real.** At 0.15, 114/199 trials voided for excitatory collapse — that
+  amplitude is partly out of the linear regime. The clause therefore *specifies* a void-rate
+  ceiling rather than leaving the amplitude free, otherwise the test can be made to say anything.
+- **Cost:** three 100 s runs (~6 min). Comparable to B8.
+- **This is a measurement of the certified point, not of every point.** A different operating point
+  could be inhibition-dominated without being inhibition-stabilized; that is precisely why the
+  clause is worth having.
+- **It does not rescue §5.1.** B9 is a mechanism test, not a criticality test. The open question of
+  whether the sustained frame owes a power-law statement is untouched by it.
+
+## C.4 If declined
+
+The result stands as a recorded measurement in `SESSION_LOG.md` either way; declining B9 only means
+Gate B continues not to cover it. My recommendation is to adopt it — it is the only clause in the
+battery capable of falsifying the mechanism story rather than confirming the phenomenology.

@@ -1631,3 +1631,59 @@ withdraw.
 §5.1 (blueprint-level, awaiting the consult — `RELAY_TO_WEB.md` is paste-ready but cannot be sent
 from here, no Chrome extension connected), transient robustness, the untested ISN effect, the
 three unbuilt blueprint mechanisms.
+
+---
+
+## Session 4 (cont.) — 2026-07-27 — ISN PARADOXICAL EFFECT: POSITIVE (z = −3.7). The network is inhibition-stabilized.
+
+**Intent.** §5.1 is blocked on a human (the consult cannot be sent from here — no Chrome extension
+connected), so take the next item that was blocked for a reason I could actually remove: the ISN
+paradoxical effect, which `FINAL_BLUEPRINT.md` §7.4 requires, Gate B does not cover, and two
+earlier attempts left **untested**.
+
+**The blocker, and how it lifted.** Both attempts failed for statistical power: 20 trials gave a
+paired SEM of ±0.3–0.6 Hz, as large as any perturbation small enough to stay in the linear regime.
+Power scales as 1/√n ⇒ ~10× the trials. That was blocked because splitting E from I needed a full
+spike dump, and 200 trials' worth is ~40 M rows. **Unblocked with NO contract change:** the
+compacted fired list plus `is_inh` already contains the split — it only had to be *aggregated on
+the host* rather than stored. `RATEDUMP_START/LEN` → `ei_rate.csv`, two ints per step, ~4 orders
+of magnitude smaller than a spike dump. No second device counter, no new kernel, `brain.h` untouched.
+
+**Manifest.** `config.h` `RATEDUMP_*`; `main.cu` E/I trace + `ei_rate.csv`; +`tools/sweep_isn.ps1`
+(200 trials, 100 ms injection every 300 ms over 60 s of settled network), +`tools/isn.py`.
+`CLAUDE.md` and `README.md` corrected (both still carried the retired Gate B). No contract change.
+
+**RESULT — PARADOXICAL, monotonic, and the control is clean.**
+
+| injection | usable | Δ exc (Hz) | Δ inh, drift-corrected (Hz) | z |
+|---|---|---|---|---|
+| 0 (control) | 195/199 | +0.029 ± 0.049 | +0.020 ± 0.044 | — |
+| **0.05 (≈1 %)** | **187/199** | −0.481 ± 0.062 | **−0.259 ± 0.069** | **−3.7** |
+| 0.15 (≈3 %) | 85/199 | −1.194 ± 0.089 | −0.464 ± 0.087 | −5.3 |
+
+**Inject extra EXCITATORY current into the INHIBITORY population and their rate FALLS.** That is
+the defining signature of an inhibition-stabilized network, and the causal chain shows in the same
+table: the injection briefly raises I, that suppresses E (−0.48 Hz), and the lost recurrent
+excitation onto I outweighs what was injected.
+
+Three reasons to trust this where the earlier attempts failed:
+1. **The control is clean** — its own paired delta is +0.020 ± 0.044 Hz (0.45σ). `isn.py` checks
+   this explicitly and would have declared the design biased and the rest unreadable otherwise.
+   That guard exists *because* two earlier designs were silently broken.
+2. **The power arrived as predicted** — SEM ±0.3–0.6 at n=20 → **±0.05 at n≈190**.
+3. **The perturbation stayed in regime** — 12/199 voided at 0.05, against 10/20 and 15/20 at the
+   amplitudes used before. This is linear response, not a knockout.
+
+**`0.05` is the PRIMARY result; `0.15` is not.** At 0.15, 114/199 trials voided for excitatory
+collapse, so that amplitude is partly out of the linear regime — its larger z is real but must not
+be the quoted figure. Consistently, Δinh is *sub-linear* in the injection (3× amplitude → 1.8×
+effect), exactly as partial saturation predicts.
+
+**Significance.** This is the first test of a claim the project has been making implicitly since the
+E/I reframe, and it is the one blueprint clause that could have **falsified** rather than
+corroborated. It did not. Combined with the earlier finding that the AI state was reached *without*
+cross-homeostasis, fast inhibition or a circuit-breaker, the picture is that inhibitory
+**authority** — not additional inhibitory *mechanism* — is what the network needed.
+
+**NEXT.** Proposing this as **B9** in `CONTRACT_CHANGES_PROPOSED.md`: Gate B currently omits a
+blueprint acceptance clause that is now measurable and passing. Flagged, not applied.
